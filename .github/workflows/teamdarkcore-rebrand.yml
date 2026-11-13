@@ -1,0 +1,48 @@
+name: TeamDarkCore rebrand and verify
+on:
+  workflow_dispatch:
+  push:
+    branches: [TDCore]
+    paths:
+      - 'tools/teamdarkcore_rebrand.py'
+      - '.github/workflows/teamdarkcore-rebrand.yml'
+permissions:
+  contents: write
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: TDCore
+          fetch-depth: 0
+      - name: Apply coordinated project renames
+        run: python3 tools/teamdarkcore_rebrand.py
+      - name: Detect unresolved old project identifiers
+        run: |
+          if grep -RIlE 'com[./]featurestic[./]box|FeaturesticBox|FeaturesticLoader' TeamDarkCore --include='*.java' --include='*.aidl' --include='*.xml' --include='*.gradle' --include='*.cpp' --include='*.h'; then
+            echo 'Unresolved identifiers remain' >&2
+            exit 1
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android NDK
+        run: sdkmanager "ndk;27.2.12479018"
+      - name: Assemble renamed AAR
+        run: chmod +x gradlew && ./gradlew :TeamDarkCore:assembleRelease --stacktrace
+      - name: Commit verified renaming
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "refactor: rebrand SDK sources as TeamDarkCore"
+            git push origin HEAD:TDCore
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TeamDarkCore-release-aar
+          path: TeamDarkCore/build/outputs/aar/TeamDarkCore-release.aar
