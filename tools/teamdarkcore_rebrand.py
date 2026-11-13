@@ -43,16 +43,6 @@ for p in list(ROOT.rglob("*")):
     if new != old:
         p.write_text(new, encoding="utf-8")
         changed += 1
-# GitHub workflow names and their build commands also need updates.
-for p in (ROOT / ".github").rglob("*"):
-    if p.is_file() and p.suffix in {".yml", ".yaml"}:
-        old = p.read_text(encoding="utf-8")
-        new = old
-        for a, b in REPLACEMENTS:
-            new = new.replace(a, b)
-        if new != old:
-            p.write_text(new, encoding="utf-8")
-            changed += 1
 paths = sorted((p for p in ROOT.rglob("*") if p.is_file() and ".git" not in p.parts and "build" not in p.parts and "tools" not in p.parts), key=lambda x: len(x.parts), reverse=True)
 for p in paths:
     relative = str(p.relative_to(ROOT))
