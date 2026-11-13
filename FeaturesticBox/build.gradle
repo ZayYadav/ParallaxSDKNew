@@ -1,0 +1,79 @@
+plugins {
+    id 'com.android.library'
+}
+
+def sdkPanelKeyId = (project.findProperty('sdkPanelKeyId') ?: 'featuresticbox-v3-default').toString().trim()
+def sdkPanelEcdhPublicKey = (project.findProperty('sdkPanelEcdhPublicKey') ?: 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEB29pg0xCTlBN53BaKguW6i5SnVhgBEZzls1++Md1h2DxYTEyrOvFJQ345ivm62aR62foDZdPE/r+JPCwuCqODg==').toString().trim()
+def sdkPanelSigningPublicKey = (project.findProperty('sdkPanelSigningPublicKey') ?: 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECBYEaNJQjpYq6b2g2eEyr79030B+YBIT7car6HCsGlEBGmdn+lPuXs0i89cFgJIbL52i8GrMCjBl03YqqIwEqA==').toString().trim()
+
+def buildConfigQuote = { String value ->
+    '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
+android {
+    compileSdk(rootProject.ext.has('compileSdk') ? rootProject.ext.compileSdk : 36)
+    buildToolsVersion(rootProject.ext.has('buildToolsVersion') ? rootProject.ext.buildToolsVersion : '36.0.0')
+    ndkVersion(rootProject.ext.has('ndkVersion') ? rootProject.ext.ndkVersion : '27.2.12479018')
+
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/cpp/Android.mk')
+        }
+    }
+
+    aidlPackagedList "android/app/IServiceConnection.aidl"
+    aidlPackagedList "android/accounts/IAccountManagerResponse.aidl"
+
+    defaultConfig {
+        minSdk(rootProject.ext.has('minSdk') ? rootProject.ext.minSdk : 24)
+        targetSdk(rootProject.ext.has('targetSdk') ? rootProject.ext.targetSdk : 36)
+        versionCode(rootProject.ext.has('versionCode') ? rootProject.ext.versionCode : 2)
+        versionName(rootProject.ext.has('versionName') ? rootProject.ext.versionName : '2.0.0')
+        consumerProguardFiles 'proguard.txt'
+
+        buildConfigField 'String', 'SDK_PANEL_KEY_ID', buildConfigQuote(sdkPanelKeyId)
+        buildConfigField 'String', 'SDK_PANEL_ECDH_PUBLIC_KEY', buildConfigQuote(sdkPanelEcdhPublicKey)
+        buildConfigField 'String', 'SDK_PANEL_SIGNING_PUBLIC_KEY', buildConfigQuote(sdkPanelSigningPublicKey)
+
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a"
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        encoding "UTF-8"
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        aidl true
+        buildConfig true
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+        warningsAsErrors false
+        disable "UnusedResources", 'RestrictedApi'
+        textReport false
+    }
+
+    namespace "com.featurestic.box"
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
+}

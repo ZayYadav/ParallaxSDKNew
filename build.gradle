@@ -1,0 +1,30 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.11.1'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+ext {
+    minSdk = 24
+    ndkVersion = '27.2.12479018'
+    compileSdk = 36
+    buildToolsVersion = '36.0.0'
+    targetSdk = 36
+    versionName = '2.0.0'
+    versionCode = 2
+}
