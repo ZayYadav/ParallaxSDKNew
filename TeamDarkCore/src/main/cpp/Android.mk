@@ -64,6 +64,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/libzip
 
 # --- Source Files ---
 TDCORE_CORE_SRC := $(LOCAL_PATH)/BoxCore.cpp \
+                        $(LOCAL_PATH)/NativePolicyVerifier.cpp \
                         $(LOCAL_PATH)/AnogsCompat.cpp \
                         $(LOCAL_PATH)/IO.cpp \
                         $(LOCAL_PATH)/KittyMemory/KittyMemory.cpp \
