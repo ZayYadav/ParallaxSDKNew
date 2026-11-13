@@ -22,9 +22,27 @@ TLS / HTTPS; Android Gradle + NDK 27.2.12479018 for the AAR.
 3. Configure server-side environment values based on `.env.example`.
    **The example .env file is not parsed by PHP.** Configure actual
    environment variables through trusted hosting configuration, not URL
-   parameters or JavaScript. If cPanel does not provide environment
-   variables for PHP, set them using a server-owned bootstrap configuration
-   outside public_html before PHP starts.
+   parameters or JavaScript. On cPanel without PHP environment controls,
+   create `.tdcore-private.php` exactly **one directory above the Apache
+   DOCUMENT_ROOT**. It must return an associative PHP array. Example:
+
+   ```php
+   <?php
+   return [
+       'TD_DB_HOST' => 'localhost',
+       'TD_DB_PORT' => '3306',
+       'TD_DB_NAME' => 'cpanel_db',
+       'TD_DB_USER' => 'cpanel_user',
+       'TD_DB_PASSWORD' => 'YOUR_DB_PASSWORD',
+       'TD_LICENSE_PEPPER' => 'LONG_RANDOM_HEX',
+       'TD_ADMIN_PASSWORD_HASH' => 'ARGON2ID_HASH',
+       'TD_SIGNING_PRIVATE_KEY_FILE' => '/home/ACCOUNT/private/tdcore_signing.pem',
+       'TD_FORCE_HTTPS' => '1'
+   ];
+   ```
+
+   The real file must never be committed, uploaded into public_html,
+   or served by the web server. Set its permissions to 600.
 4. Generate signing key on the **server**, outside public_html (keep mode
    600; use a dedicated account, not world-readable shared folders):
 
