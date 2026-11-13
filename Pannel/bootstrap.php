@@ -4,6 +4,15 @@ declare(strict_types=1);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 date_default_timezone_set('UTC');
+if (PHP_SAPI !== 'cli') {
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: DENY');
+    header('Referrer-Policy: no-referrer');
+    header("Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    if (($_SERVER['HTTPS'] ?? '') === 'on') {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
+}
 
 function td_env(string $key, string $default = ''): string {
     $value = getenv($key);
