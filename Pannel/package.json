@@ -1,7 +1,7 @@
 {
-  "name": "featurestic-box-panel",
+  "name": "teamdark-core-panel",
   "version": "1.0.0",
-  "description": "Featurestic Box Central Admin Panel & Crash Telemetry Hub",
+  "description": "TeamDark Box Central Admin Panel & Crash Telemetry Hub",
   "type": "module",
   "main": "server.js",
   "scripts": {

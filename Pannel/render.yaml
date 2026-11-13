@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: featurestic-box-panel
+    name: teamdark-core-panel
     runtime: node
     plan: free
     buildCommand: pnpm install

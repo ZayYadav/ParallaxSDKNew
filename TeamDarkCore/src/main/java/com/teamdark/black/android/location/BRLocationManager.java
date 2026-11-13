@@ -1,0 +1,21 @@
+package com.teamdark.black.android.location;
+
+import com.teamdark.blackreflection.BlackReflection;
+
+public class BRLocationManager {
+    public static LocationManagerStatic getWithException() {
+        return BlackReflection.create(LocationManagerStatic.class, null, true);
+    }
+    public static LocationManagerStatic get() {
+        return BlackReflection.create(LocationManagerStatic.class, null, false);
+    }
+    public static LocationManagerContext getWithException(final Object caller) {
+        return BlackReflection.create(LocationManagerContext.class, caller, true);
+    }
+    public static LocationManagerContext get(final Object caller) {
+        return BlackReflection.create(LocationManagerContext.class, caller, false);
+    }
+    public static Class<?> getRealClass() {
+        return com.teamdark.blackreflection.utils.ClassUtil.classReady(LocationManagerContext.class);
+    }
+}

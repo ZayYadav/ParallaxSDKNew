@@ -1,0 +1,11 @@
+package com.teamdark.black.android.content.pm;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import com.teamdark.blackreflection.annotation.*;
+
+@BClassNameNotProcess("android.content.pm.SigningInfo")
+public interface SigningInfoStatic {
+    @BConstructorNotProcess
+    android.content.pm.SigningInfo _new(android.content.pm.PackageParser.SigningDetails SigningDetails0);
+}

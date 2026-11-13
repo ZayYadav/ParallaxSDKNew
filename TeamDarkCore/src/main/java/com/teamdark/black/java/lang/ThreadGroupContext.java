@@ -1,0 +1,21 @@
+package com.teamdark.black.java.lang;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import com.teamdark.blackreflection.annotation.*;
+
+@BClassNameNotProcess("java.lang.ThreadGroup")
+public interface ThreadGroupContext {
+    @BFieldSetNotProcess
+    void _set_groups(final Object value);
+    @BFieldCheckNotProcess
+    Field _check_groups();
+    @BFieldNotProcess
+    java.util.List<java.lang.ThreadGroup> groups();
+    @BFieldSetNotProcess
+    void _set_parent(final Object value);
+    @BFieldCheckNotProcess
+    Field _check_parent();
+    @BFieldNotProcess
+    java.lang.ThreadGroup parent();
+}

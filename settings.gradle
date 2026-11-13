@@ -1,4 +1,4 @@
-include ':FeaturesticBox'
-project(':FeaturesticBox').projectDir = file('FeaturesticBox')
+include ':TeamDarkCore'
+project(':TeamDarkCore').projectDir = file('TeamDarkCore')
 
-rootProject.name = "FeaturesticBox"
+rootProject.name = "TeamDarkCore"
