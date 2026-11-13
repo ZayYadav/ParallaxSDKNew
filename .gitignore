@@ -17,3 +17,11 @@ node_modules/
 # Misc
 .DS_Store
 *.log
+
+# PHP panel secrets (never commit private material)
+Pannel/.env
+Pannel/.env.local
+Pannel/*.pem
+Pannel/*.key
+Pannel/config.local.php
+.tdcore-private.php
