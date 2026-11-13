@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REPLACEMENTS = [
     ("com.featurestic.box", "com.teamdark.core"),
     ("com/featurestic/box", "com/teamdark/core"),
-    ("FeaturesticBoxCore", "TeamDarkCore"),
+    ("FeaturesticBoxCore", "TeamDarkCoreEngine"),
     ("FeaturesticBox", "TeamDarkCore"),
     ("FeaturesticLoader", "TeamDarkCoreLoader"),
     ("featuresticbox", "teamdarkcore"),
