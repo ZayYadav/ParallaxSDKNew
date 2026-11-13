@@ -73,10 +73,12 @@ try {
     $issued = time();
     $validUntil = min($issued + 60, $expiry);
     // Exact ten-field canonical payload; signed on server and verified inside C++.
+    $effectiveFeatures = (int)$license['feature_mask'] !== 0
+        ? (int)$license['feature_mask'] : (int)$settings['default_features'];
     $policy = td_sign_policy([
         'tdcore-policy-v1', (string)$license['id'], $device, $pkg,
         $cert, $nonce, (string)$issued, (string)$validUntil,
-        (string)(int)$license['feature_mask'], (string)$settings['policy_version']
+        (string)$effectiveFeatures, (string)$settings['policy_version']
     ]);
     td_json([
         'status'=>true,
@@ -84,7 +86,7 @@ try {
         'signature'=>$policy['signature'],
         'data'=>[
             'expires_at'=>$validUntil,
-            'features'=>(int)$license['feature_mask'],
+            'features'=>$effectiveFeatures,
             'notice'=>$settings['notice'],
             'policy_version'=>(int)$settings['policy_version']
         ]
