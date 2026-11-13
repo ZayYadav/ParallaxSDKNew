@@ -19,8 +19,8 @@ final class AdminLicenseController {
         View::field('APK signing SHA-256','signing_sha256',$v['signing_sha256']??'','text','maxlength="64"').
         View::field('Max bound devices','max_devices',$v['max_devices']??1,'number','min="1" max="1000"').
         View::field('Requests per minute','requests_per_minute',$v['requests_per_minute']??30,'number','min="1" max="600"').
-        View::field('Signed feature mask (31 bits)','feature_mask',$v['feature_mask']??0,'number','min="0" max="2147483647"').
-        '</div><p class="muted">For strict mode, enter an allowed package and signer fingerprint.
+        '</div>'.View::featureChoices((int)($v['feature_mask']??0)).
+        '<p class="muted">For strict mode, enter an allowed package and signer fingerprint.
         Disabling a restriction reduces assurance. Expiry, signature checks, nonce binding and online authorization are always mandatory.</p>';
     }
     public static function page(): never {
