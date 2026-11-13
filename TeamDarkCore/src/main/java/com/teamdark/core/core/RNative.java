@@ -14,7 +14,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
-import com.fbox.core.NativeCore;
+import com.tdcore.core.NativeCore;
 import com.teamdark.core.TeamDarkCoreEngine;
 import com.teamdark.core.app.BActivityThread;
 import com.teamdark.core.core.env.BEnvironment;
