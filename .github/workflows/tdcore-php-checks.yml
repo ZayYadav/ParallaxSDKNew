@@ -15,6 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check PHP version
         run: php -v
+      - name: Enforce maximum 30 PHP panel files
+        run: |
+          count=$(find Pannel -type f -name '*.php' | wc -l)
+          echo "Panel PHP file count: $count"
+          test "$count" -le 30
       - name: PHP source syntax
         run: |
           set -euo pipefail
