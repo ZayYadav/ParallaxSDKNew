@@ -2,6 +2,8 @@ plugins {
     id 'com.android.library'
 }
 
+def sdkLicenseUrl = (project.findProperty('tdLicenseUrl') ?: '').toString().trim()
+def sdkLicenseP256PublicKey = (project.findProperty('tdLicenseP256PublicKey') ?: '').toString().trim()
 def sdkPanelKeyId = (project.findProperty('sdkPanelKeyId') ?: 'teamdarkcore-v3-default').toString().trim()
 def sdkPanelEcdhPublicKey = (project.findProperty('sdkPanelEcdhPublicKey') ?: 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEB29pg0xCTlBN53BaKguW6i5SnVhgBEZzls1++Md1h2DxYTEyrOvFJQ345ivm62aR62foDZdPE/r+JPCwuCqODg==').toString().trim()
 def sdkPanelSigningPublicKey = (project.findProperty('sdkPanelSigningPublicKey') ?: 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECBYEaNJQjpYq6b2g2eEyr79030B+YBIT7car6HCsGlEBGmdn+lPuXs0i89cFgJIbL52i8GrMCjBl03YqqIwEqA==').toString().trim()
@@ -31,6 +33,9 @@ android {
         versionName(rootProject.ext.has('versionName') ? rootProject.ext.versionName : '2.0.0')
         consumerProguardFiles 'proguard.txt'
 
+        // Auth is fail-closed when the PHP endpoint / public key are not configured.
+        buildConfigField 'String', 'TD_LICENSE_URL', buildConfigQuote(sdkLicenseUrl)
+        buildConfigField 'String', 'TD_LICENSE_PUBLIC_KEY', buildConfigQuote(sdkLicenseP256PublicKey)
         buildConfigField 'String', 'SDK_PANEL_KEY_ID', buildConfigQuote(sdkPanelKeyId)
         buildConfigField 'String', 'SDK_PANEL_ECDH_PUBLIC_KEY', buildConfigQuote(sdkPanelEcdhPublicKey)
         buildConfigField 'String', 'SDK_PANEL_SIGNING_PUBLIC_KEY', buildConfigQuote(sdkPanelSigningPublicKey)
