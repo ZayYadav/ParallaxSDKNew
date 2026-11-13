@@ -5,6 +5,7 @@ on:
     branches: [TDCore]
     paths:
       - 'tools/teamdarkcore_rebrand.py'
+      - 'tools/tdcore_migrate_legacy_packages.py'
       - '.github/workflows/teamdarkcore-rebrand.yml'
       - 'TeamDarkCore/src/main/java/**'
       - 'TeamDarkCore/src/main/cpp/**'
@@ -20,6 +21,8 @@ jobs:
           fetch-depth: 0
       - name: Apply coordinated project renames
         run: python3 tools/teamdarkcore_rebrand.py
+      - name: Migrate SBox and FBox source packages
+        run: python3 tools/tdcore_migrate_legacy_packages.py
       - name: Detect unresolved old project identifiers
         run: |
           if grep -RIlE 'com[./]featurestic[./]box|FeaturesticBox|FeaturesticLoader' TeamDarkCore --include='*.java' --include='*.aidl' --include='*.xml' --include='*.gradle' --include='*.cpp' --include='*.h'; then
@@ -34,6 +37,12 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "refactor: rebrand SDK sources as TeamDarkCore"
             git push origin HEAD:TDCore
+          fi
+      - name: Audit legacy package paths
+        run: |
+          if find TeamDarkCore/src/main/java/com -type d \( -name sbox -o -name fbox \) | grep .; then
+            echo 'Legacy source directory remains' >&2
+            exit 1
           fi
       - uses: actions/setup-java@v4
         with:
