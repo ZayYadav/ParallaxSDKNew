@@ -36,7 +36,7 @@ public final class SdkLicenseGuard {
     public static final String PANEL_URL = "https://teamdark-core-panel.onrender.com/connect";
     public static final String TELEMETRY_URL = "https://teamdark-core-panel.onrender.com/api/telemetry/crash";
 
-    private static final String PREF_NAME = "fbox_sdk_guard";
+    private static final String PREF_NAME = "tdcore_sdk_guard";
     private static final String KEY_SDK_KEY = "sdk_key";
     private static final String KEY_LAST_VERIFIED = "last_verified";
     private static final String KEY_TOKEN = "token";

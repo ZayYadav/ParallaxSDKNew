@@ -1,4 +1,4 @@
-package com.sbox.app.configuration;
+package com.tdcore.compat.app.configuration;
 
 import androidx.annotation.Keep;
 

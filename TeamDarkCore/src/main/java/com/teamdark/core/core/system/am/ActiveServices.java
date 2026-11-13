@@ -77,7 +77,7 @@ public class ActiveServices {
                     Log.w(TAG, "Direct provider startService fallback failed", t);
                 }
             }
-        }, "fbox-start-service").start();
+        }, "tdcore-start-service").start();
         return new ComponentName(serviceInfo.packageName, serviceInfo.name);
     }
 

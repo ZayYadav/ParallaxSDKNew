@@ -1,4 +1,4 @@
-package com.sbox.entity.pm;
+package com.tdcore.compat.entity.pm;
 
 import androidx.annotation.Keep;
 

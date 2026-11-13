@@ -1,4 +1,4 @@
-package com.fbox.core;
+package com.tdcore.legacy;
 
 import androidx.annotation.Keep;
 import java.io.File;

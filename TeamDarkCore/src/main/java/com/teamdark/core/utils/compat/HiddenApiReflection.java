@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 4-Layer Hidden API Unsealer for Android 9–16:
- *   1. C++ JNI Unseal via libfbox.so (com.fbox.core.NativeCore.disableHiddenApi() -> libart.so VMRuntime_setHiddenApiExemptions)
+ *   1. C++ JNI Unseal via libtdcore.so (com.tdcore.legacy.NativeCore.disableHiddenApi() -> libart.so VMRuntime_setHiddenApiExemptions)
  *   2. Double Meta-Reflection (Class.class.getDeclaredMethod("getDeclaredMethod", ...))
  *   3. LSPosed HiddenApiBypass (org.lsposed.hiddenapibypass.HiddenApiBypass)
  *   4. FreeReflection (me.weishu.reflection.Reflection)
@@ -20,7 +20,7 @@ public final class HiddenApiReflection {
     private static boolean unsealViaNativeCore() {
         try {
             if (sNativeUnsealed.compareAndSet(false, true)) {
-                return com.fbox.core.NativeCore.disableHiddenApi();
+                return com.tdcore.legacy.NativeCore.disableHiddenApi();
             }
             return true;
         } catch (Throwable ignored) {

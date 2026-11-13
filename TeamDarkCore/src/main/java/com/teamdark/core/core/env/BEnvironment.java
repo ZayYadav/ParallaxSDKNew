@@ -19,7 +19,7 @@ import java.util.Locale;
 /**
  * Virtual Environment Paths for TeamDarkCore.
  * Uses /storage/emulated/0/SdCard/Android/obb/<pkg> and /storage/emulated/0/SdCard/Android/data/<pkg>
- * matching BLACK-OPNE / RIYAZ-VIP and libfbox.so C++ IO::redirectPath ("/SdCard").
+ * matching BLACK-OPNE / RIYAZ-VIP and libtdcore.so C++ IO::redirectPath ("/SdCard").
  */
 public class BEnvironment {
     public static boolean sHideRoot = true;
@@ -75,7 +75,7 @@ public class BEnvironment {
                 sVBoxRoot = new File("/data/user/0/" + hostPkg + "/files");
                 return sVBoxRoot;
             }
-            return new File("/data/local/tmp/fbox");
+            return new File("/data/local/tmp/tdcore");
         }
     }
 

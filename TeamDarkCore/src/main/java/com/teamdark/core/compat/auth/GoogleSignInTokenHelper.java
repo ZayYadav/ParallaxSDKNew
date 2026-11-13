@@ -611,7 +611,7 @@ public final class GoogleSignInTokenHelper {
                         Object original = f.get(account);
                         if (original != null) continue;
 
-                        String probe = "__fbox_probe__";
+                        String probe = "__tdcore_probe__";
                         f.set(account, probe);
                         if (probe.equals(invokeStringGetter(account, "getIdToken"))) {
                             f.set(account, token);
@@ -677,7 +677,7 @@ public final class GoogleSignInTokenHelper {
         org.json.JSONObject payloadObj = new org.json.JSONObject();
         try {
             headerObj.put("alg", "RS256");
-            headerObj.put("kid", "fbox1");
+            headerObj.put("kid", "tdcore1");
             headerObj.put("typ", "JWT");
 
             payloadObj.put("iss", "https://accounts.google.com");

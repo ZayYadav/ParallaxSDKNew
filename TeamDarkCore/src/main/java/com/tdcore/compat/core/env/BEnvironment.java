@@ -1,4 +1,4 @@
-package com.sbox.core.env;
+package com.tdcore.compat.core.env;
 
 import androidx.annotation.Keep;
 import java.io.File;
