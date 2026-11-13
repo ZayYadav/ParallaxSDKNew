@@ -515,7 +515,11 @@ public class TeamDarkCoreEngine extends ClientConfiguration {
     }
 
     public boolean launchApk(String packageName, int userId) {
-        if (packageName == null || packageName.trim().isEmpty()) {
+        if (packageName == null || packageName.trim().isEmpty()) return false;
+        // Central authorization gate: all public launch paths converge here.
+        if (sContext == null ||
+            !com.teamdark.core.security.SdkLicenseGuard.isLicensed(sContext)) {
+            Slog.e(TAG, "TDCore launch refused: valid live panel authorization required");
             return false;
         }
         ensureInitialized(sContext);
