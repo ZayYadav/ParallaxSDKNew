@@ -104,6 +104,14 @@ public final class SdkLicenseGuard {
         return verifySync(context, key);
     }
 
+
+    /** Panel-signed optional feature bits. No feature is enabled without a new server check. */
+    public static boolean isFeatureAllowed(Context context, int featureBit) {
+        if (featureBit < 0 || featureBit > 30 || !isLicensed(context)) return false;
+        int mask = NativePolicyVerifier.authorizedFeatures();
+        return (mask & (1 << featureBit)) != 0;
+    }
+
     public static final String KEY_PLUGIN_URL = "plugin_url";
 
     /** Legacy accessor. PHP license service does not provide executable plugin URLs. */
