@@ -7,7 +7,17 @@ date_default_timezone_set('UTC');
 
 function td_env(string $key, string $default = ''): string {
     $value = getenv($key);
-    return $value === false ? $default : trim((string)$value);
+    if ($value !== false && trim((string)$value) !== '') return trim((string)$value);
+    // Shared hosting fallback: PHP config one directory ABOVE DOCUMENT_ROOT.
+    // Never place the real file under the publicly served panel directory.
+    static $local = null;
+    if ($local === null) {
+        $root = (string)($_SERVER['DOCUMENT_ROOT'] ?? __DIR__);
+        $configPath = dirname(rtrim($root, '/')) . '/.tdcore-private.php';
+        $loaded = is_file($configPath) ? require $configPath : [];
+        $local = is_array($loaded) ? $loaded : [];
+    }
+    return array_key_exists($key, $local) ? trim((string)$local[$key]) : $default;
 }
 function td_required(string $key): string {
     $value = td_env($key);
