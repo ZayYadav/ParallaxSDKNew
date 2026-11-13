@@ -1,4 +1,4 @@
-# TDCore PHP + MySQL license panel (migration track)
+# TDCore Modular PHP + MySQL Control Center
 
 This is a new, **fail-closed online-license** implementation, not a drop-in
 replacement for all 46 historical Node/Neon APIs. It provides a PHP admin
@@ -17,7 +17,7 @@ TLS / HTTPS; Android Gradle + NDK 27.2.12479018 for the AAR.
 1. Create a MySQL database/user with its own permissions. Import
    `Pannel/schema.sql` using phpMyAdmin. **Do not publish schema.sql.**
 2. Point a **dedicated HTTPS subdomain document root** at the contents of
-   `Pannel/`. PHP admin UI is `https://<your-panel-host>/index.php`;
+   `Pannel/`. PHP admin UI is `https://<your-panel-host>/admin`;
    API is `https://<your-panel-host>/connect` via .htaccess rewrite.
 3. Configure server-side environment values based on `.env.example`.
    **The example .env file is not parsed by PHP.** Configure actual
@@ -111,3 +111,58 @@ key or server downtime always deny authorization.
   replacement in staging with realistic license/device flows.
 - Signing-key rotation requires a client build with the new public key.
   Protect the original private key and perform backups/controlled rotations.
+
+## Modular architecture (23 PHP files, including front controller and CI router)
+
+All public URLs are extensionless and handled through the `index.php` front
+controller; PHP classes in `Pannel/app/` are not directly web-accessible.
+The `router.php` is exclusively for the PHP CLI development server.
+Do not deploy `LegacyNodePanel/` into the PHP document root.
+
+**Routes:** `GET /admin`, `GET|POST /admin/login`,
+`POST /admin/logout`, `GET|POST /admin/licenses`,
+`POST /admin/licenses/{id}/status`,
+`POST /admin/licenses/{id}/policy`,
+`POST /admin/licenses/{id}/reset-devices`,
+`GET|POST /admin/settings`, `GET /admin/devices`,
+`POST /admin/devices/block`, `POST /admin/devices/unblock`,
+`GET /admin/audit`, `POST /connect` and
+`POST /api/v1/license/check`, plus `GET /health`.
+`/connect` is retained for the existing Android SDK URL.
+
+**Per-key enforcement selection** (the administrator chooses explicit modes):
+- Package rule: `required` (strict exact match), `if_present` (optional
+  strict match when configured), `disabled` (no package binding).
+- Signing certificate: same strict/optional/disabled choices.
+- Device rule: `bind` with maximum devices or `unrestricted`.
+  Device blacklist continues to apply regardless of mode.
+- Per-key request rate limit, feature-mask bits, expiry, global maintenance,
+  key revocation, one-time license key generation and security audit.
+
+**Hard requirements that cannot be switched off per license:** an active,
+unexpired key; HTTPS; fresh nonce; verified ECDSA P-256 lease signed on the
+server; 60-second lease; online check and failure-closed behavior. All admin
+mutations require an authenticated session and CSRF token. IPs and device
+bindings are stored only as keyed HMAC-SHA256 digests.
+
+The license **feature mask** is signed in the policy. Native SDK APIs expose
+the verified mask, but a particular SDK operation is controlled by a bit
+only when the corresponding SDK entry point explicitly checks that bit.
+Do not treat enabling a checkbox as magic control of every Android method.
+New strict-mode keys require explicit Android package and certificate SHA-256.
+
+On upgrade, re-import `schema.sql` to create the three new tables.
+Existing license records without `td_license_rules` retain compatibility:
+their configured package and signer are enforced if present, and device binding
+remains enabled. Newly issued keys use the administrator-selected rules.
+
+### Local endpoint smoke test
+
+```sh
+php -S 127.0.0.1:8091 -t Pannel Pannel/router.php
+```
+
+Then inspect `/health` and `/admin/login`. This development router must
+never be used for production: use Apache HTTPS with `Pannel/.htaccess`
+and a trusted PHP handler. Protect the server private key and configuration
+outside the web root.

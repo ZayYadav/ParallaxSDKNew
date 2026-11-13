@@ -59,3 +59,30 @@ CREATE TABLE IF NOT EXISTS td_login_attempts (
  window_start DATETIME NOT NULL,
  blocked_until DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- New modular route/service policies. Idempotent on repeated imports.
+CREATE TABLE IF NOT EXISTS td_license_rules (
+ license_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+ package_rule ENUM('required','if_present','disabled') NOT NULL DEFAULT 'required',
+ signer_rule ENUM('required','if_present','disabled') NOT NULL DEFAULT 'required',
+ device_rule ENUM('bind','unrestricted') NOT NULL DEFAULT 'bind',
+ requests_per_minute SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY (license_id) REFERENCES td_licenses(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS td_rate_buckets (
+ bucket_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ window_start BIGINT UNSIGNED NOT NULL,
+ hits INT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS td_used_nonces (
+ license_id BIGINT UNSIGNED NOT NULL,
+ nonce_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (license_id,nonce_hash),
+ INDEX idx_nonce_age(created_at),
+ FOREIGN KEY (license_id) REFERENCES td_licenses(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

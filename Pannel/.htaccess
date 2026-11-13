@@ -1,9 +1,18 @@
-Options -Indexes
+Options -Indexes -MultiViews
+DirectoryIndex index.php
 <IfModule mod_rewrite.c>
  RewriteEngine On
- RewriteRule ^connect/?$ api.php [L,QSA]
- RewriteRule ^api/v1/license/check/?$ api.php [L,QSA]
+ # Reject extension-based PHP URLs (internal front-controller rewrite is allowed).
+ RewriteCond %{THE_REQUEST} \s/+[^\s?]*\.php(?:[\s?]) [NC]
+ RewriteRule ^ - [R=404,L]
+ # Never serve internal source, SQL, secrets, docs, or dotfiles.
+ RewriteRule ^(?:app|private|vendor|tests)(?:/|$) - [F,L,NC]
+ RewriteRule (^|/)\. - [F,L]
+ RewriteRule \.(?:sql|log|md|pem|key|bak|ini|env|json|yml|yaml)$ - [F,L,NC]
+ RewriteCond %{REQUEST_FILENAME} !-f
+ RewriteCond %{REQUEST_FILENAME} !-d
+ RewriteRule ^ index.php [QSA,L]
 </IfModule>
-<FilesMatch "^(schema\.sql|\.env.*|bootstrap\.php|README\.md|generate-signing-key\.php)$">
+<FilesMatch "^(?!index\.php$).+\.php$">
  Require all denied
 </FilesMatch>
