@@ -1,0 +1,29 @@
+name: TDCore PHP syntax & security checks
+on:
+  push:
+    branches: [TDCore]
+    paths:
+      - 'Pannel/**'
+      - '.github/workflows/tdcore-php-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PHP version
+        run: php -v
+      - name: PHP source syntax
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            php -l "$file"
+          done < <(find Pannel -name '*.php' -type f | sort)
+      - name: Verify no real secrets are checked in
+        run: |
+          if grep -REn '-----BEGIN (EC |RSA )?PRIVATE KEY-----' Pannel --include='*.php' --include='*.sql'; then
+            echo 'Private key found in repository' >&2
+            exit 1
+          fi
