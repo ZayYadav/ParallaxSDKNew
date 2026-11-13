@@ -1,0 +1,78 @@
+name: TDCore PHP MySQL integration smoke test
+on:
+  push:
+    branches: [TDCore]
+    paths:
+      - 'Pannel/**'
+      - 'tools/panel_crypto_selftest.php'
+      - '.github/workflows/tdcore-panel-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test-password-only
+          MYSQL_DATABASE: tdcore_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptest-password-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      TD_DB_HOST: 127.0.0.1
+      TD_DB_PORT: '3306'
+      TD_DB_NAME: tdcore_ci
+      TD_DB_USER: root
+      TD_DB_PASSWORD: test-password-only
+      TD_LICENSE_PEPPER: testing-only-not-a-production-secret-123456789
+      TD_FORCE_HTTPS: '0'
+      TD_SIGNING_PRIVATE_KEY_FILE: /tmp/tdcore-ci-signing.pem
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install database PHP extension and MySQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y php-mysql mysql-client
+      - name: Import schema
+        run: mysql -h127.0.0.1 -uroot -p"$TD_DB_PASSWORD" tdcore_ci < Pannel/schema.sql
+      - name: Generate disposable P-256 signing key
+        run: openssl ecparam -name prime256v1 -genkey -noout -out "$TD_SIGNING_PRIVATE_KEY_FILE"
+      - name: Seed test license
+        run: |
+          php -r '
+          require "Pannel/bootstrap.php";
+          $db=td_db();
+          $db->exec("UPDATE td_settings SET enabled=1, maintenance=0 WHERE id=1");
+          $key="TD-".str_repeat("A",64);
+          $stmt=$db->prepare("INSERT INTO td_licenses(key_digest,label,expires_at,max_devices,package_name,feature_mask) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 DAY), 1, ?, 7)");
+          $stmt->execute([td_digest($key),"CI test","com.example.test"]);
+          if ((int)td_settings()["enabled"] !== 1) exit(1);
+          '
+      - name: Test online authorization and signature
+        run: |
+          php -S 127.0.0.1:8091 -t Pannel >/tmp/tdcore-php.log 2>&1 &
+          server=$!
+          trap 'kill $server || true' EXIT
+          sleep 2
+          export RESPONSE="$(curl --fail --silent --show-error -X POST http://127.0.0.1:8091/api.php             --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"             --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "pkg=com.example.test"             --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"             --data-urlencode "nonce=DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")"
+          php -r '
+            $j=json_decode(getenv("RESPONSE"),true);
+            if (!is_array($j)||($j["status"]??false)!==true) exit(1);
+            $raw=base64_decode($j["policy"],true);
+            $sig=base64_decode($j["signature"],true);
+            $pub=openssl_pkey_get_public(openssl_pkey_get_details(openssl_pkey_get_private(file_get_contents(getenv("TD_SIGNING_PRIVATE_KEY_FILE"))))["key"]);
+            if (openssl_verify($raw,$sig,$pub,OPENSSL_ALGO_SHA256)!==1) exit(2);
+            if (openssl_verify($raw."BAD",$sig,$pub,OPENSSL_ALGO_SHA256)!==0) exit(3);
+            $fields=explode("\n",$raw);
+            if (count($fields)!==10||$fields[0]!=="tdcore-policy-v1"||$fields[8]!=="7") exit(4);
+            echo "Verified signed license policy and tamper rejection\n";
+          '
+          code=$(curl -sS -o /tmp/invalid.json -w '%{http_code}'             -X POST http://127.0.0.1:8091/api.php             --data-urlencode "user_key=TD-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "pkg=com.example.test"             --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"             --data-urlencode "nonce=EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+          test "$code" = 401
