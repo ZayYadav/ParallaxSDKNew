@@ -5,7 +5,7 @@ final class AdminController {
     public static function home(): never {
         Auth::requireAdmin();
         $settings=Settings::get();
-        $counts=Database::one('SELECT COUNT(*) AS total, SUM(status="active") AS active FROM td_licenses') ?: [];
+        $counts=Database::one('SELECT COUNT(*) AS total, SUM(CASE WHEN status=? THEN 1 ELSE 0 END) AS active FROM td_licenses',['active']) ?: [];
         $body='<div class="grid">
         <section class="panel"><h3>Licenses</h3><p class="big">'.View::e($counts['total']??0).'</p></section>
         <section class="panel"><h3>Active records</h3><p class="big">'.View::e($counts['active']??0).'</p></section>
