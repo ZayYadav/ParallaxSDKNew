@@ -16,6 +16,17 @@ public final class NativePolicyVerifier {
         }
         AVAILABLE = ok;
     }
+
+    @Keep
+    private static native int getNativeFeatures(long currentEpochSeconds);
+
+    /** Signed feature bits expire with the verified server lease. */
+    public static int authorizedFeatures() {
+        if (!AVAILABLE) return 0;
+        try { return getNativeFeatures(System.currentTimeMillis() / 1000L); }
+        catch (Throwable ignored) { return 0; }
+    }
+
     private NativePolicyVerifier() {}
 
     @Keep
