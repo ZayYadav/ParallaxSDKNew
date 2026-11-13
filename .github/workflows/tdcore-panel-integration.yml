@@ -44,7 +44,8 @@ jobs:
         run: |
           php -r '
           require "Pannel/bootstrap.php";
-          foreach (explode(";", file_get_contents("Pannel/schema.sql")) as $statement) {
+          $schema = preg_replace("/^\\s*--.*$/m", "", file_get_contents("Pannel/schema.sql"));
+          foreach (explode(";", $schema) as $statement) {
             if (trim($statement) !== "") td_db()->exec($statement);
           }
           '
