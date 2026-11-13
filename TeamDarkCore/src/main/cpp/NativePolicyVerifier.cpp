@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <atomic>
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
@@ -12,6 +13,9 @@
  * ECDSA operations through JNI. No private signing material is shipped to SDK.
  */
 namespace {
+std::atomic<long long> gLeaseUntil{0};
+std::atomic<int> gFeatureMask{0};
+
 bool ok(JNIEnv* env) {
     if (env == nullptr || env->ExceptionCheck()) {
         if (env != nullptr && env->ExceptionCheck()) env->ExceptionClear();
@@ -111,6 +115,8 @@ Java_com_teamdark_core_security_NativePolicyVerifier_verifySignedPolicy(
     jstring publicKeyB64, jstring deviceValue, jstring packageValue,
     jstring certificateValue, jstring nonceValue, jlong now) {
 
+    gLeaseUntil.store(0);
+    gFeatureMask.store(0);
     if (!env || now <= 0 || !payloadB64 || !signatureB64 ||
         !publicKeyB64 || !deviceValue || !packageValue ||
         !certificateValue || !nonceValue) return JNI_FALSE;
@@ -144,5 +150,15 @@ Java_com_teamdark_core_security_NativePolicyVerifier_verifySignedPolicy(
         expires <= static_cast<long long>(now) ||
         expires > issued + 60LL) return JNI_FALSE;
 
-    return verifyEcdsa(env, bytes, sig, pub) ? JNI_TRUE : JNI_FALSE;
+    if (!verifyEcdsa(env, bytes, sig, pub)) return JNI_FALSE;
+    gFeatureMask.store(static_cast<int>(features));
+    gLeaseUntil.store(expires);
+    return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_teamdark_core_security_NativePolicyVerifier_getNativeFeatures(
+    JNIEnv*, jclass, jlong now) {
+    if (now <= 0 || gLeaseUntil.load() <= static_cast<long long>(now)) return 0;
+    return static_cast<jint>(gFeatureMask.load());
 }
