@@ -43,10 +43,10 @@ jobs:
       - name: Import schema with PDO
         run: |
           php -r '
-          require "Pannel/bootstrap.php";
+          require "Pannel/app/bootstrap.php";
           $schema = preg_replace("/^\\s*--.*$/m", "", file_get_contents("Pannel/schema.sql"));
           foreach (explode(";", $schema) as $statement) {
-            if (trim($statement) !== "") td_db()->exec($statement);
+            if (trim($statement) !== "") \TDCore\Panel\Database::db()->exec($statement);
           }
           '
       - name: Generate disposable P-256 signing key
@@ -54,21 +54,24 @@ jobs:
       - name: Seed test license
         run: |
           php -r '
-          require "Pannel/bootstrap.php";
-          $db=td_db();
+          require "Pannel/app/bootstrap.php";
+          $db=\TDCore\Panel\Database::db();
           $db->exec("UPDATE td_settings SET enabled=1, maintenance=0 WHERE id=1");
           $key="TD-".str_repeat("A",64);
           $stmt=$db->prepare("INSERT INTO td_licenses(key_digest,label,expires_at,max_devices,package_name,feature_mask) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 DAY), 1, ?, 7)");
-          $stmt->execute([td_digest($key),"CI test","com.example.test"]);
-          if ((int)td_settings()["enabled"] !== 1) exit(1);
+          $stmt->execute([\TDCore\Panel\Crypto::digest($key),"CI test","com.example.test"]);
+          $id=(int)$db->lastInsertId();
+          $db->prepare("INSERT INTO td_license_rules(license_id,package_rule,signer_rule,device_rule,requests_per_minute) VALUES(?, ?, ?, ?, ?)")
+             ->execute([$id,"required","if_present","bind",30]);
+          if ((int)\TDCore\Panel\Settings::get()["enabled"] !== 1) exit(1);
           '
       - name: Test online authorization and signature
         run: |
-          php -S 127.0.0.1:8091 -t Pannel >/tmp/tdcore-php.log 2>&1 &
+          php -S 127.0.0.1:8091 -t Pannel Pannel/router.php >/tmp/tdcore-php.log 2>&1 &
           server=$!
           trap 'kill $server || true' EXIT
           sleep 2
-          export RESPONSE="$(curl --fail --silent --show-error -X POST http://127.0.0.1:8091/api.php             --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"             --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "pkg=com.example.test"             --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"             --data-urlencode "nonce=DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")"
+          export RESPONSE="$(curl --fail --silent --show-error -X POST http://127.0.0.1:8091/api/v1/license/check             --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"             --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "pkg=com.example.test"             --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"             --data-urlencode "nonce=DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")"
           php -r '
             $j=json_decode(getenv("RESPONSE"),true);
             if (!is_array($j)||($j["status"]??false)!==true) exit(1);
@@ -81,5 +84,28 @@ jobs:
             if (count($fields)!==10||$fields[0]!=="tdcore-policy-v1"||$fields[8]!=="7") exit(4);
             echo "Verified signed license policy and tamper rejection\n";
           '
-          code=$(curl -sS -o /tmp/invalid.json -w '%{http_code}'             -X POST http://127.0.0.1:8091/api.php             --data-urlencode "user_key=TD-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "pkg=com.example.test"             --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"             --data-urlencode "nonce=EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+          code=$(curl -sS -o /tmp/invalid.json -w '%{http_code}'             -X POST http://127.0.0.1:8091/api/v1/license/check             --data-urlencode "user_key=TD-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"             --data-urlencode "pkg=com.example.test"             --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"             --data-urlencode "nonce=EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
           test "$code" = 401
+          # Extension-based API access is disabled.
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8091/api.php)
+          test "$code" = 404
+          # Nonce replay of the same license / nonce must be rejected.
+          code=$(curl -sS -o /tmp/replay.json -w '%{http_code}' -X POST \
+            http://127.0.0.1:8091/api/v1/license/check \
+            --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" \
+            --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" \
+            --data-urlencode "pkg=com.example.test" \
+            --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" \
+            --data-urlencode "nonce=DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+          test "$code" = 409
+          # Invalid package must fail for strict package binding.
+          code=$(curl -sS -o /tmp/invalid-pkg.json -w '%{http_code}' -X POST \
+            http://127.0.0.1:8091/api/v1/license/check \
+            --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" \
+            --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" \
+            --data-urlencode "pkg=com.example.mismatch" \
+            --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" \
+            --data-urlencode "nonce=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+          test "$code" = 403
+          curl -sf http://127.0.0.1:8091/admin/login >/dev/null
+          curl -sf http://127.0.0.1:8091/health | grep -q tdcore-panel
