@@ -20,6 +20,21 @@ final class View {
         }
         return $html.'</select></label>';
     }
+    /** Render 31 individually selectable signed feature bits, without JS. */
+    public static function featureChoices(int $mask): string {
+        $html='<fieldset style="border:1px solid #475d75;border-radius:9px;margin:14px 0;padding:15px">
+          <legend>Optional signed SDK feature flags</legend>
+          <input type="hidden" name="feature_selection" value="1">
+          <div class="grid">';
+        for ($i=0;$i<31;$i++) {
+            $checked=($mask & (1 << $i))!==0?' checked':'';
+            $html.='<label><input type="checkbox" name="feature_bits[]" value="'.$i.'"'.$checked.'> Bit '.$i.'</label>';
+        }
+        return $html.'</div><p class="muted">Select bits supported by your SDK integrations.
+          Bit 0 = 1, bit 1 = 2, bit 2 = 4, etc. Empty selection inherits the global
+          default mask when it is nonzero. Turning on a bit alone does not add a
+          new security check to an SDK function.</p></fieldset>';
+    }
     public static function page(string $title,string $body,bool $admin=true): never {
         $notice=Auth::takeFlash();
         $links=$admin?'<nav><a href="/admin">Overview</a><a href="/admin/licenses">Licenses</a><a href="/admin/settings">Security & settings</a><a href="/admin/devices">Devices</a><a href="/admin/audit">Audit</a>
