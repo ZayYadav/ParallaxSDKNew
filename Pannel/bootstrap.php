@@ -79,7 +79,8 @@ function td_private_key(): OpenSSLAsymmetricKey {
     $key = openssl_pkey_get_private($source);
     if (!$key) throw new RuntimeException('Invalid signing key');
     $meta = openssl_pkey_get_details($key);
-    if (!$meta || $meta['type'] !== OPENSSL_KEYTYPE_EC) {
+    if (!$meta || $meta['type'] !== OPENSSL_KEYTYPE_EC
+        || ($meta['ec']['curve_name'] ?? '') !== 'prime256v1') {
         throw new RuntimeException('Signing key must be P-256 ECDSA');
     }
     return $key;
