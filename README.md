@@ -49,3 +49,33 @@ Output: `TeamDarkCore/build/outputs/aar/TeamDarkCore-release.aar`
 
 ### Cloud (GitHub Actions — Zero PC Needed):
 Upload this folder to a GitHub repository and run the **Android CI** workflow in the **Actions** tab to download `TeamDarkCore-release-aar`.
+
+## 5. PHP License Control Center (TDCore branch)
+
+The active PHP/MySQL implementation is in [Pannel/README.md](Pannel/README.md).
+Old Node/Neon sources are archived in `LegacyNodePanel/` outside the PHP
+document root; do not deploy them as part of the live PHP panel.
+
+The admin must provision the HTTPS panel endpoint, P-256 signing private key
+(server only), its public X.509 DER Base64 value (SDK build property),
+MySQL schema, and at least one valid license. Example SDK setup:
+
+```java
+import com.teamdark.core.TeamDarkCore;
+TeamDarkCore.setSdkKey(this, "TD-ISSUED-LICENSE-KEY");
+boolean allowed = TeamDarkCore.startGame(this, "your.authorized.package");
+```
+
+Set `tdLicenseUrl=https://YOUR-PANEL/connect` and
+`tdLicenseP256PublicKey=BASE64_X509_P256_PUBLIC_KEY` in your local Gradle
+properties before building the SDK. Without both, SDK authorization
+**fails closed**; it will not use the old cached/offline grace mode.
+Optional signed feature flags can be queried using
+`SdkLicenseGuard.isFeatureAllowed(context, bitIndex)` after authorization.
+Root / facade launch paths and the central `launchApk` path call online
+authorization, but runtime testing on real Android devices is still required.
+
+This is an ongoing migration from the old Node panel's much larger API.
+The PHP admin/license API is implemented; historical client portal and
+telemetry interfaces are not yet migrated. The new panel does not
+automatically migrate old Neon production data.
