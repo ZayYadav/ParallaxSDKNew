@@ -29,7 +29,8 @@ final class License {
     public static function status(int $id, string $status): void {
         if (!in_array($status,['active','disabled','revoked'],true))
             throw new Deny('INVALID_STATUS',422);
-        if (!Database::run('UPDATE td_licenses SET status=? WHERE id=?',[$status,$id]))
+        Database::run('UPDATE td_licenses SET status=? WHERE id=?',[$status,$id]);
+        if (!Database::one('SELECT id FROM td_licenses WHERE id=?',[$id]))
             throw new Deny('UNKNOWN_LICENSE',404);
         Database::run('UPDATE td_settings SET policy_version=policy_version+1 WHERE id=1');
         Audit::write('license_status','admin',$id,$status);
@@ -37,8 +38,10 @@ final class License {
     public static function rules(int $id, array $v): void {
         $r=Validation::choices($v);
         $expiry=trim((string)($v['expires_at']??''));
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$expiry) ||
-            !\DateTimeImmutable::createFromFormat('!Y-m-d',$expiry,new \DateTimeZone('UTC')))
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$expiry))
+            throw new Deny('INVALID_EXPIRY',422);
+        $parsed=\DateTimeImmutable::createFromFormat('!Y-m-d',$expiry,new \DateTimeZone('UTC'));
+        if (!$parsed || $parsed->format('Y-m-d')!==$expiry)
             throw new Deny('INVALID_EXPIRY',422);
         Database::transaction(static function () use ($id,$r,$expiry): void {
             $n=Database::run('UPDATE td_licenses SET max_devices=?,feature_mask=?,package_name=?,signing_sha256=?,expires_at=? WHERE id=?',[
