@@ -54,7 +54,17 @@ final class Validation {
         $device=self::deviceRule($v['device_rule']??'bind');
         $max=self::integer($v['max_devices']??1,1,1000);
         $perMin=self::integer($v['requests_per_minute']??30,1,600);
-        $feature=self::integer($v['feature_mask']??0,0,2147483647);
+        if (isset($v['feature_selection'])) {
+            $feature=0;
+            $bits=$v['feature_bits']??[];
+            if (!is_array($bits) || count($bits)>31) throw new Deny('INVALID_FEATURE_SET',422);
+            foreach ($bits as $bit) {
+                $index=self::integer($bit,0,30);
+                $feature |= (1 << $index);
+            }
+        } else {
+            $feature=self::integer($v['feature_mask']??0,0,2147483647);
+        }
         $pkg=self::package($v['package_name']??'');
         $cert=self::signer($v['signing_sha256']??'');
         if ($package==='required' && $pkg==='') throw new Deny('PACKAGE_REQUIRED',422);
