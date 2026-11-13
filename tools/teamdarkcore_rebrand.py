@@ -19,6 +19,11 @@ REPLACEMENTS = [
     ("featurestic-box", "teamdark-core"),
     ("Featurestic", "TeamDark"),
     ("featurestic", "teamdark"),
+    # Safe TDCore-only names; JNI-linked NativeCore and bundled libfbox.so are retained.
+    ("fbox_so_cache", "tdcore_so_cache"),
+    ("fbox_so_assets", "tdcore_so_assets"),
+    ("fboxApiLevel", "tdCoreApiLevel"),
+    ("FEATURESTIC_CORE_SRC", "TDCORE_CORE_SRC"),
 ]
 EXTS = {".java", ".kt", ".aidl", ".xml", ".gradle", ".kts", ".mk", ".cpp", ".cc", ".c", ".h", ".hpp", ".pro", ".txt", ".md", ".yml", ".yaml", ".json", ".properties", ".sh", ".bat", ".cmake"}
 FILENAMES = {"Android.mk", "Application.mk", "CMakeLists.txt", "gradlew", ".gitignore"}
