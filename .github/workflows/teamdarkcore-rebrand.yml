@@ -6,6 +6,8 @@ on:
     paths:
       - 'tools/teamdarkcore_rebrand.py'
       - '.github/workflows/teamdarkcore-rebrand.yml'
+      - 'TeamDarkCore/src/main/java/**'
+      - 'TeamDarkCore/src/main/cpp/**'
 permissions:
   contents: write
 jobs:
@@ -45,6 +47,7 @@ jobs:
       - name: Assemble renamed AAR
         run: chmod +x gradlew && ./gradlew :TeamDarkCore:assembleRelease --stacktrace
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: TeamDarkCore-release-aar
           path: TeamDarkCore/build/outputs/aar/TeamDarkCore-release.aar
