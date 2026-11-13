@@ -8,7 +8,7 @@ import com.teamdark.core.core.RNative;
 public class NativeCore {
     static {
         try {
-            System.loadLibrary("fbox");
+            System.loadLibrary("TDCore");
         } catch (Throwable t) {
             t.printStackTrace();
         }
