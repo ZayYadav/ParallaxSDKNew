@@ -21,6 +21,8 @@ jobs:
           while IFS= read -r file; do
             php -l "$file"
           done < <(find Pannel -name '*.php' -type f | sort)
+      - name: P-256 signature self-test
+        run: php tools/panel_crypto_selftest.php
       - name: Verify no real secrets are checked in
         run: |
           if grep -REn '-----BEGIN (EC |RSA )?PRIVATE KEY-----' Pannel --include='*.php' --include='*.sql'; then
