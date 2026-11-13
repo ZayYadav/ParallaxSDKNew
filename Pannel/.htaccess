@@ -1,0 +1,9 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+ RewriteEngine On
+ RewriteRule ^connect/?$ api.php [L,QSA]
+ RewriteRule ^api/v1/license/check/?$ api.php [L,QSA]
+</IfModule>
+<FilesMatch "^(schema\.sql|\.env.*|bootstrap\.php|README\.md|generate-signing-key\.php)$">
+ Require all denied
+</FilesMatch>
