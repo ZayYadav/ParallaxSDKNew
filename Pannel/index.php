@@ -102,6 +102,12 @@ if (($_SERVER['REQUEST_METHOD']??'')==='POST') {
             $db->prepare('DELETE FROM td_devices WHERE license_id=?')->execute([$id]);
             $db->exec('UPDATE td_settings SET policy_version=policy_version+1 WHERE id=1');
             td_audit('devices_reset','admin',$id); td_flash('Device bindings reset');
+        } elseif ($action==='unblock_device') {
+            $hash=strtolower(trim((string)($_POST['device_hash']??'')));
+            if (!preg_match('/^[a-f0-9]{64}$/D',$hash)) throw new RuntimeException('Invalid device hash');
+            $db->prepare('DELETE FROM td_blocked_devices WHERE device_hash=?')->execute([$hash]);
+            $db->exec('UPDATE td_settings SET policy_version=policy_version+1 WHERE id=1');
+            td_audit('device_unblocked','admin'); td_flash('Device unblocked');
         } elseif ($action==='block_device') {
             $device=strtoupper(trim((string)($_POST['device']??'')));
             if (!preg_match('/^[A-F0-9]{32,64}$/D',$device)) throw new RuntimeException('Invalid device fingerprint');
@@ -129,6 +135,7 @@ if ($isAdmin) {
     $licenses=$db->query('SELECT l.*, (SELECT COUNT(*) FROM td_devices d WHERE d.license_id=l.id) AS device_count
                           FROM td_licenses l ORDER BY l.id DESC LIMIT 150')->fetchAll();
     $audits=$db->query('SELECT action, actor, license_id, details, created_at FROM td_audit ORDER BY id DESC LIMIT 25')->fetchAll();
+    $blocked=$db->query('SELECT device_hash,reason,created_at FROM td_blocked_devices ORDER BY created_at DESC LIMIT 100')->fetchAll();
 }
 ?>
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -203,7 +210,19 @@ code{overflow-wrap:anywhere} .key{padding:14px;background:#23364e;border-radius:
 <input type="hidden" name="csrf" value="<?=td_e($csrf)?>"><input type="hidden" name="action" value="block_device">
 <div class="grid"><div><label>SDK device fingerprint (32–64 hex)</label><input name="device" required></div>
 <div><label>Reason</label><input name="reason" maxlength="200"></div></div>
-<button class="danger">Block device</button></form></section>
+<button class="danger">Block device</button></form>
+<?php if(count($blocked)>0): ?><h3>Blocked fingerprints</h3>
+<div style="overflow-x:auto"><table><thead><tr><th>Stored hash</th><th>Reason</th><th>Blocked UTC</th><th></th></tr></thead><tbody>
+<?php foreach($blocked as $blockedDevice): ?><tr>
+<td><code><?=td_e($blockedDevice['device_hash'])?></code></td>
+<td><?=td_e($blockedDevice['reason'])?></td>
+<td><?=td_e($blockedDevice['created_at'])?></td>
+<td><form method="post">
+<input type="hidden" name="csrf" value="<?=td_e($csrf)?>">
+<input type="hidden" name="action" value="unblock_device">
+<input type="hidden" name="device_hash" value="<?=td_e($blockedDevice['device_hash'])?>">
+<button class="muted">Unblock</button></form></td></tr><?php endforeach; ?>
+</tbody></table></div><?php endif; ?></section>
 <section><h2>Recent audit activity</h2><div style="overflow-x:auto"><table>
 <tr><th>UTC</th><th>Action</th><th>Actor</th><th>License ID</th><th>Detail</th></tr>
 <?php foreach($audits as $e): ?><tr><td><?=td_e($e['created_at'])?></td><td><?=td_e($e['action'])?></td>
