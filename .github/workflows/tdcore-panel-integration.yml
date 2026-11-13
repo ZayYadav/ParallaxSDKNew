@@ -36,12 +36,18 @@ jobs:
       TD_SIGNING_PRIVATE_KEY_FILE: /tmp/tdcore-ci-signing.pem
     steps:
       - uses: actions/checkout@v4
-      - name: Install database PHP extension and MySQL client
+      - name: Install database PHP extension
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y php-mysql mysql-client
-      - name: Import schema
-        run: mysql -h127.0.0.1 -uroot -p"$TD_DB_PASSWORD" tdcore_ci < Pannel/schema.sql
+          sudo apt-get install -y php-mysql
+      - name: Import schema with PDO
+        run: |
+          php -r '
+          require "Pannel/bootstrap.php";
+          foreach (explode(";", file_get_contents("Pannel/schema.sql")) as $statement) {
+            if (trim($statement) !== "") td_db()->exec($statement);
+          }
+          '
       - name: Generate disposable P-256 signing key
         run: openssl ecparam -name prime256v1 -genkey -noout -out "$TD_SIGNING_PRIVATE_KEY_FILE"
       - name: Seed test license
