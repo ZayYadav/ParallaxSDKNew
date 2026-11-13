@@ -242,6 +242,9 @@ public final class TeamDarkCore {
     }
 
     public static boolean startGame(Context context, String packageName, int userId, String nativeSoNameOrPath) {
+        if (context == null || !com.teamdark.core.security.SdkLicenseGuard.isLicensed(context)) {
+            return false; // Deny before any install, staging or plugin work.
+        }
         if (context != null) {
             TeamDarkCoreEngine.get().ensureInitialized(context);
         }
