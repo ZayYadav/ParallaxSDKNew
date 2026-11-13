@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageInfo;
+import android.content.pm.Signature;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,6 +23,10 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import javax.net.ssl.HttpsURLConnection;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -33,8 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class SdkLicenseGuard {
 
-    public static final String PANEL_URL = "https://teamdark-core-panel.onrender.com/connect";
-    public static final String TELEMETRY_URL = "https://teamdark-core-panel.onrender.com/api/telemetry/crash";
+    public static final String PANEL_URL = com.teamdark.core.BuildConfig.TD_LICENSE_URL;
+    public static final String TELEMETRY_URL = ""; // Legacy telemetry is not enabled in the PHP panel.
 
     private static final String PREF_NAME = "tdcore_sdk_guard";
     private static final String KEY_SDK_KEY = "sdk_key";
@@ -91,129 +97,127 @@ public final class SdkLicenseGuard {
         return "";
     }
 
+    /** No offline fallback: panel approval is required on every authorization. */
     public static boolean isLicensed(final Context context) {
-        String key = getSdkKey(context);
-        if (key.isEmpty()) {
-            postToast(context, "TeamDarkCore SDK Error: Missing SDK License Key");
-            return false;
-        }
-
-        // Check local cached validity (valid for 12 hours between online pings)
-        if (context != null) {
-            try {
-                SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-                long lastVerified = sp.getLong(KEY_LAST_VERIFIED, 0);
-                boolean wasValid = sp.getBoolean(KEY_STATUS, false);
-                long now = System.currentTimeMillis();
-                if (wasValid && (now - lastVerified < 12 * 60 * 60 * 1000L)) {
-                    sCachedValid = true;
-                    // Trigger silent background re-validation if > 2 hours
-                    if (now - lastVerified > 2 * 60 * 60 * 1000L) {
-                        verifyAsync(context, key);
-                    }
-                    return true;
-                }
-            } catch (Throwable ignored) {}
-        }
-
-        // Synchronous check if no recent valid cache
+        final String key = getSdkKey(context);
+        if (context == null || key.isEmpty()) return false;
         return verifySync(context, key);
     }
 
     public static final String KEY_PLUGIN_URL = "plugin_url";
 
+    /** Legacy accessor. PHP license service does not provide executable plugin URLs. */
     public static String getPluginUrl(Context context) {
-        if (context == null) return "";
-        try {
-            return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).getString(KEY_PLUGIN_URL, "");
-        } catch (Throwable ignored) {
-            return "";
-        }
+        return "";
     }
 
     public static boolean verifySync(final Context context, final String key) {
-        if (key == null || key.trim().isEmpty()) return false;
+        if (context == null || key == null || key.trim().isEmpty()) return false;
+        // Run networking on a worker to avoid Android's network-on-main-thread exception.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            FutureTask<Boolean> task = new FutureTask<>(() -> performOnlineCheck(context, key));
+            Thread worker = new Thread(task, "TDCore-License-Check");
+            worker.setDaemon(true);
+            worker.start();
+            try { return task.get(6, TimeUnit.SECONDS); }
+            catch (Throwable ignored) { task.cancel(true); return false; }
+        }
+        return performOnlineCheck(context, key);
+    }
+
+    private static String certSha256(Context context) {
         try {
-            String hwid = getDeviceHwid(context);
-            String pkg = context != null ? context.getPackageName() : "";
-            String postData = "game=SDK&user_key=" + URLEncoder.encode(key.trim(), "UTF-8")
-                    + "&pkg=" + URLEncoder.encode(pkg, "UTF-8")
-                    + "&serial=" + URLEncoder.encode(hwid, "UTF-8");
+            PackageManager pm = context.getPackageManager();
+            String packageName = context.getPackageName();
+            PackageInfo info;
+            Signature[] signatures;
+            if (Build.VERSION.SDK_INT >= 28) {
+                info = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES);
+                if (info.signingInfo == null) return "";
+                signatures = info.signingInfo.getApkContentsSigners();
+            } else {
+                info = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES);
+                signatures = info.signatures;
+            }
+            if (signatures == null || signatures.length != 1) return "";
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(signatures[0].toByteArray());
+            StringBuilder b = new StringBuilder(64);
+            for (byte element : digest) b.append(String.format(java.util.Locale.ROOT, "%02X", element & 0xff));
+            return b.toString();
+        } catch (Throwable ignored) { return ""; }
+    }
 
-            URL url = new URL(PANEL_URL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    private static String freshNonce() {
+        byte[] raw = new byte[16];
+        new SecureRandom().nextBytes(raw);
+        StringBuilder s = new StringBuilder(32);
+        for (byte v : raw) s.append(String.format(java.util.Locale.ROOT, "%02X", v & 0xff));
+        return s.toString();
+    }
+
+    private static boolean performOnlineCheck(Context context, String key) {
+        sCachedValid = false;
+        if (!PANEL_URL.startsWith("https://") ||
+            com.teamdark.core.BuildConfig.TD_LICENSE_PUBLIC_KEY.isEmpty()) return false;
+        HttpsURLConnection conn = null;
+        try {
+            String device = getDeviceHwid(context);
+            String pkg = context.getPackageName();
+            String cert = certSha256(context);
+            String nonce = freshNonce();
+            if (!device.matches("[A-F0-9]{32,64}") || !cert.matches("[A-F0-9]{64}")) return false;
+            String payload = "user_key=" + URLEncoder.encode(key.trim(), "UTF-8")
+                + "&serial=" + URLEncoder.encode(device, "UTF-8")
+                + "&pkg=" + URLEncoder.encode(pkg, "UTF-8")
+                + "&signing_sha256=" + URLEncoder.encode(cert, "UTF-8")
+                + "&nonce=" + URLEncoder.encode(nonce, "UTF-8");
+            conn = (HttpsURLConnection) new URL(PANEL_URL).openConnection();
+            conn.setInstanceFollowRedirects(false);
             conn.setRequestMethod("POST");
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(8000);
+            conn.setConnectTimeout(4000);
+            conn.setReadTimeout(4000);
             conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
             conn.setRequestProperty("Accept", "application/json");
-
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(postData.getBytes(StandardCharsets.UTF_8));
-                os.flush();
+            try (OutputStream out = conn.getOutputStream()) {
+                out.write(payload.getBytes(StandardCharsets.UTF_8));
             }
-
-            int code = conn.getResponseCode();
-            InputStream is = (code >= 200 && code < 400) ? conn.getInputStream() : conn.getErrorStream();
-            StringBuilder sb = new StringBuilder();
-            if (is != null) {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = br.readLine()) != null) sb.append(line);
+            if (conn.getResponseCode() != 200) return false;
+            StringBuilder result = new StringBuilder();
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(
+                    conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    result.append(line);
+                    if (result.length() > 16384) return false;
                 }
             }
-
-            String body = sb.toString().trim();
-            if (body.startsWith("{")) {
-                JSONObject json = new JSONObject(body);
-                boolean status = json.optBoolean("status", false);
-                if (status) {
-                    sCachedValid = true;
-                    if (context != null) {
-                        try {
-                            SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-                            JSONObject data = json.optJSONObject("data");
-                            String exp = data != null ? data.optString("exp", "") : "";
-                            String token = data != null ? data.optString("token", "") : "";
-                            String pUrl = data != null ? data.optString("plugin_url", "") : "";
-                            sp.edit()
-                                    .putBoolean(KEY_STATUS, true)
-                                    .putLong(KEY_LAST_VERIFIED, System.currentTimeMillis())
-                                    .putString(KEY_EXP, exp)
-                                    .putString(KEY_TOKEN, token)
-                                    .putString(KEY_PLUGIN_URL, pUrl)
-                                    .apply();
-                        } catch (Throwable ignored) {}
-                    }
-                    return true;
-                } else {
-                    final String reason = json.optString("message", json.optString("reason", "SDK key invalid"));
-                    sCachedValid = false;
-                    if (context != null) {
-                        try {
-                            SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-                            sp.edit().putBoolean(KEY_STATUS, false).apply();
-                        } catch (Throwable ignored) {}
-                    }
-                    postToast(context, "TeamDarkCore SDK License Error: " + reason);
-                    return false;
-                }
+            JSONObject json = new JSONObject(result.toString());
+            if (!json.optBoolean("status", false)) return false;
+            String policy = json.optString("policy", "");
+            String signature = json.optString("signature", "");
+            boolean accepted = NativePolicyVerifier.verify(policy, signature,
+                com.teamdark.core.BuildConfig.TD_LICENSE_PUBLIC_KEY,
+                device, pkg, cert, nonce, System.currentTimeMillis()/1000L);
+            sCachedValid = accepted;
+            if (accepted) {
+                SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+                sp.edit().putBoolean(KEY_STATUS, true)
+                    .putLong(KEY_LAST_VERIFIED, System.currentTimeMillis())
+                    .remove(KEY_PLUGIN_URL).apply();
             }
-        } catch (Throwable e) {
-            // If offline, check if previously validated
-            if (context != null) {
+            return accepted;
+        } catch (Throwable ignored) {
+            return false; // Network, server, parsing, certificate or JNI failure = deny
+        } finally {
+            if (conn != null) conn.disconnect();
+            if (!sCachedValid) {
                 try {
-                    SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-                    if (sp.getBoolean(KEY_STATUS, false)) {
-                        return true;
-                    }
+                    context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                        .edit().putBoolean(KEY_STATUS, false).remove(KEY_PLUGIN_URL).apply();
                 } catch (Throwable ignored) {}
             }
-            postToast(context, "TeamDarkCore SDK License: Cannot connect to license server");
-            return false;
         }
-        return false;
     }
 
     public static void verifyAsync(final Context context, final String key) {
