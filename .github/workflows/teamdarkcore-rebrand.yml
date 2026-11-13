@@ -24,6 +24,15 @@ jobs:
             echo 'Unresolved identifiers remain' >&2
             exit 1
           fi
+      - name: Commit renamed source before build validation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "refactor: rebrand SDK sources as TeamDarkCore"
+            git push origin HEAD:TDCore
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -33,15 +42,6 @@ jobs:
         run: sdkmanager "ndk;27.2.12479018"
       - name: Assemble renamed AAR
         run: chmod +x gradlew && ./gradlew :TeamDarkCore:assembleRelease --stacktrace
-      - name: Commit verified renaming
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "refactor: rebrand SDK sources as TeamDarkCore"
-            git push origin HEAD:TDCore
-          fi
       - uses: actions/upload-artifact@v4
         with:
           name: TeamDarkCore-release-aar
