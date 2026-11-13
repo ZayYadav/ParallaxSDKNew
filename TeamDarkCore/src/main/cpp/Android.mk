@@ -63,7 +63,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/KittyMemory
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libzip
 
 # --- Source Files ---
-FEATURESTIC_CORE_SRC := $(LOCAL_PATH)/BoxCore.cpp \
+TDCORE_CORE_SRC := $(LOCAL_PATH)/BoxCore.cpp \
                         $(LOCAL_PATH)/AnogsCompat.cpp \
                         $(LOCAL_PATH)/IO.cpp \
                         $(LOCAL_PATH)/KittyMemory/KittyMemory.cpp \
@@ -72,18 +72,18 @@ FEATURESTIC_CORE_SRC := $(LOCAL_PATH)/BoxCore.cpp \
                         $(LOCAL_PATH)/KittyMemory/MemoryPatch.cpp
 
 # C Files (xdl - SandHook/xdl)
-FEATURESTIC_CORE_SRC += $(wildcard $(LOCAL_PATH)/SandHook/xdl/*.c)
+TDCORE_CORE_SRC += $(wildcard $(LOCAL_PATH)/SandHook/xdl/*.c)
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-    FEATURESTIC_CORE_SRC += $(LOCAL_PATH)/Hook/And64InlineHook/And64InlineHook.cpp
+    TDCORE_CORE_SRC += $(LOCAL_PATH)/Hook/And64InlineHook/And64InlineHook.cpp
 endif
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-    FEATURESTIC_CORE_SRC += $(LOCAL_PATH)/Hook/Substrate/SubstrateHook.cpp \
+    TDCORE_CORE_SRC += $(LOCAL_PATH)/Hook/Substrate/SubstrateHook.cpp \
                             $(LOCAL_PATH)/Hook/Substrate/SubstratePosixMemory.cpp \
                             $(LOCAL_PATH)/Hook/Substrate/SubstrateDebug.cpp
 endif
 
-LOCAL_SRC_FILES := $(FEATURESTIC_CORE_SRC:$(LOCAL_PATH)/%=%)
+LOCAL_SRC_FILES := $(TDCORE_CORE_SRC:$(LOCAL_PATH)/%=%)
 
 # --- Build Shared Library ---
 include $(BUILD_SHARED_LIBRARY)

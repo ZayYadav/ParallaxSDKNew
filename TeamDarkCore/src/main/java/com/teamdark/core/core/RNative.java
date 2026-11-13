@@ -171,7 +171,7 @@ public class RNative {
                     return null;
                 }
                 String dlUrl = normalizeDownloadUrl(trimmed);
-                File cacheDir = new File(ctx.getFilesDir(), "fbox_so_cache");
+                File cacheDir = new File(ctx.getFilesDir(), "tdcore_so_cache");
                 FileUtils.mkdirs(cacheDir);
                 File cachedSo = new File(cacheDir, "TeamDarkCore.so");
                 if (!isValidElfFile(cachedSo)) {
@@ -301,8 +301,8 @@ public class RNative {
                     new File(new File(ctx.getFilesDir(), NATIVE_ARTIFACT_DIRECTORY), abiSubDir),
                     new File(ctx.getNoBackupFilesDir(), NATIVE_ARTIFACT_DIRECTORY),
                     new File(ctx.getFilesDir(), NATIVE_ARTIFACT_DIRECTORY),
-                    new File(ctx.getFilesDir(), "fbox_so_cache"),
-                    new File(ctx.getFilesDir(), "fbox_so_assets"),
+                    new File(ctx.getFilesDir(), "tdcore_so_cache"),
+                    new File(ctx.getFilesDir(), "tdcore_so_assets"),
                     new File(ctx.getFilesDir(), "loader"),
                     ctx.getFilesDir(),
                     BEnvironment.getSystemDir(),
@@ -462,17 +462,17 @@ public class RNative {
         } catch (Throwable ignored) {
         }
         ensureCoreNativeLoaded();
-        int fboxApiLevel = apiLevel;
-        if (fboxApiLevel >= 29 && sCoreNativeLoaded) {
+        int tdCoreApiLevel = apiLevel;
+        if (tdCoreApiLevel >= 29 && sCoreNativeLoaded) {
             try {
                 if (!nativeCanResolveArtField()) {
-                    fboxApiLevel = 28;
+                    tdCoreApiLevel = 28;
                 }
             } catch (Throwable ignored) {
             }
         }
         try {
-            NativeCore.init(fboxApiLevel);
+            NativeCore.init(tdCoreApiLevel);
         } catch (Throwable t) {
             t.printStackTrace();
         }
