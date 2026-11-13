@@ -109,3 +109,23 @@ jobs:
           test "$code" = 403
           curl -sf http://127.0.0.1:8091/admin/login >/dev/null
           curl -sf http://127.0.0.1:8091/health | grep -q tdcore-panel
+          # Selected optional enforcement: admin disables exact package matching.
+          php -r '
+            require "Pannel/app/bootstrap.php";
+            $key="TD-".str_repeat("A",64);
+            $digest=\TDCore\Panel\Crypto::digest($key);
+            \TDCore\Panel\Database::run(
+              "UPDATE td_license_rules SET package_rule=? WHERE license_id=(SELECT id FROM td_licenses WHERE key_digest=?)",
+              ["disabled",$digest]);
+          '
+          code=$(curl -sS -o /tmp/optional.json -w '%{http_code}' -X POST http://127.0.0.1:8091/api/v1/license/check --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" --data-urlencode "pkg=com.example.optional" --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" --data-urlencode "nonce=99999999999999999999999999999999")
+          test "$code" = 200
+          # Revoked license must fail even if optional package enforcement is disabled.
+          php -r '
+            require "Pannel/app/bootstrap.php";
+            \TDCore\Panel\Database::run("UPDATE td_licenses SET status=? WHERE key_digest=?",
+              ["revoked",\TDCore\Panel\Crypto::digest("TD-".str_repeat("A",64))]);
+          '
+          code=$(curl -sS -o /tmp/revoked.json -w '%{http_code}' -X POST http://127.0.0.1:8091/api/v1/license/check --data-urlencode "user_key=TD-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" --data-urlencode "serial=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" --data-urlencode "pkg=com.example.optional" --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" --data-urlencode "nonce=88888888888888888888888888888888")
+          test "$code" = 403
+
