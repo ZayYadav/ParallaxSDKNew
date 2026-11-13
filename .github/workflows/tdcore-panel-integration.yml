@@ -65,6 +65,10 @@ jobs:
              ->execute([$id,"required","if_present","bind",30]);
           if ((int)\TDCore\Panel\Settings::get()["enabled"] !== 1) exit(1);
           '
+      - name: Create test-only admin password hash
+        run: |
+          hash=$(php -r 'echo password_hash("CI-Admin-Passphrase-Only", PASSWORD_ARGON2ID);')
+          echo "TD_ADMIN_PASSWORD_HASH=$hash" >> "$GITHUB_ENV"
       - name: Test online authorization and signature
         run: |
           php -S 127.0.0.1:8091 -t Pannel Pannel/router.php >/tmp/tdcore-php.log 2>&1 &
@@ -109,6 +113,37 @@ jobs:
           test "$code" = 403
           curl -sf http://127.0.0.1:8091/admin/login >/dev/null
           curl -sf http://127.0.0.1:8091/health | grep -q tdcore-panel
+          # Exercise session auth, CSRF, extensionless admin route, key issuance and feature checkboxes.
+          curl -fsS -c /tmp/td-cookie -b /tmp/td-cookie http://127.0.0.1:8091/admin/login >/tmp/td-login.html
+          csrf=$(grep -oP 'name="csrf" value="\K[^"]+' /tmp/td-login.html | head -1)
+          test -n "$csrf"
+          code=$(curl -sS -o /tmp/td-logged-in -w '%{http_code}' -c /tmp/td-cookie -b /tmp/td-cookie -X POST http://127.0.0.1:8091/admin/login --data-urlencode "csrf=$csrf" --data-urlencode "password=CI-Admin-Passphrase-Only")
+          test "$code" = 303
+          curl -fsS -b /tmp/td-cookie http://127.0.0.1:8091/admin/licenses >/tmp/td-license-page
+          grep -q "Generate a license key" /tmp/td-license-page
+          code=$(curl -sS -o /tmp/td-created -w '%{http_code}' -c /tmp/td-cookie -b /tmp/td-cookie -X POST http://127.0.0.1:8091/admin/licenses \
+            --data-urlencode "csrf=$csrf" \
+            --data-urlencode "label=CI Web Form" \
+            --data-urlencode "days=14" \
+            --data-urlencode "max_devices=2" \
+            --data-urlencode "package_name=com.example.form" \
+            --data-urlencode "signing_sha256=CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" \
+            --data-urlencode "package_rule=required" \
+            --data-urlencode "signer_rule=required" \
+            --data-urlencode "device_rule=bind" \
+            --data-urlencode "requests_per_minute=30" \
+            --data-urlencode "feature_selection=1" \
+            --data-urlencode "feature_bits[]=0" \
+            --data-urlencode "feature_bits[]=3")
+          test "$code" = 303
+          php -r '
+            require "Pannel/app/bootstrap.php";
+            $r=\TDCore\Panel\Database::one(
+              "SELECT l.feature_mask, p.package_rule, p.signer_rule FROM td_licenses l JOIN td_license_rules p ON p.license_id=l.id WHERE l.label=?", ["CI Web Form"]);
+            if (!$r || (int)$r["feature_mask"]!==9 || $r["package_rule"]!=="required" || $r["signer_rule"]!=="required") exit(1);
+            echo "Admin key issue, strict policy, and feature selections verified\n";
+          '
+
           # Selected optional enforcement: admin disables exact package matching.
           php -r '
             require "Pannel/app/bootstrap.php";
