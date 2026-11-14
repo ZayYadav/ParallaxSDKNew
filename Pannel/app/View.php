@@ -108,12 +108,13 @@ final class View {
               .self::e(gmdate('Y')).'</div>').'</main>';
         $classes=trim(($admin?'':"auth").' '.$bodyClass);
         $stage=$video!==''?self::videoStage($video):'';
+        $ambient=$admin?'<div class="panel-bg" aria-hidden="true"><div class="aurora"></div></div>':'';
         $html='<!doctype html><html lang="en"><head><meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <meta name="robots" content="noindex,nofollow">
         <meta name="theme-color" content="#070c16">
         <title>'.self::e($title).' — TDCore Panel</title><style>'.self::css().'</style></head>
-        <body'.($classes!==''?' class="'.self::e($classes).'"':'').'>'.$stage.$main.'</body></html>';
+        <body'.($classes!==''?' class="'.self::e($classes).'"':'').'>'.$ambient.$stage.$main.'</body></html>';
         Http::text($html);
     }
 
@@ -234,7 +235,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(120,1
 .head-actions{display:flex;gap:10px;flex-wrap:wrap}
 /* cards & grid */
 .card{position:relative;background:linear-gradient(160deg,rgba(22,33,52,.82),rgba(12,19,32,.88));
- border:1px solid var(--stroke);border-radius:var(--r-lg);padding:22px;
+ border:1px solid var(--stroke);border-radius:var(--r-lg);padding:22px;overflow-x:clip;
  box-shadow:var(--shadow);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .card+.card,.card+.grid,.grid+.card,.card+.table-wrap{margin-top:18px}
 .grid>.card,.grid>.stat,.grid>.table-wrap{margin-top:0}
@@ -242,6 +243,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(120,1
 .card-head p{margin:3px 0 0;color:var(--muted);font-size:13px}
 .card-head .badge,.card-head .btn{flex:none}
 .grid{display:grid;gap:16px}
+.grid>*{min-width:0}
 .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g-3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .g-4{grid-template-columns:repeat(auto-fit,minmax(212px,1fr))}
@@ -418,12 +420,14 @@ body.login .auth-card input{padding:12px 14px;border-radius:12px;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
  box-shadow:0 10px 30px -16px rgba(0,0,0,.8)}
 body.login .auth-card input::placeholder{color:rgba(200,216,240,.65)}
-body.login .auth-submit{width:100%;margin-top:6px;padding:13px;border-radius:12px;
- letter-spacing:.01em;font-weight:800}
-body.login .auth-register{width:100%;margin-top:10px;padding:12px;border-radius:12px;
- text-decoration:none;font-weight:750;color:#e6f0ff;
+body.login .auth-submit,
+body.login .auth-register{width:100%;padding:12px;border-radius:12px;
+ text-decoration:none;letter-spacing:.01em;font-weight:750;color:#e6f0ff;
  background:rgba(6,11,20,.62);border-color:rgba(184,208,255,.38);
+ box-shadow:none;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+body.login .auth-submit{margin-top:6px}
+body.login .auth-register{margin-top:10px}
 @media(max-width:760px){
  body.login .shell.auth-wrap{padding:18px 14px max(22px,env(safe-area-inset-bottom,22px))}
  body.login .video-veil{background:
@@ -479,6 +483,13 @@ body.register .auth-foot{color:#c6d8f0;text-shadow:0 1px 10px rgba(0,0,0,.7)}
 .video-veil{position:absolute;inset:0;
  background:radial-gradient(900px 620px at 50% 0%,rgba(6,10,18,.15),rgba(6,10,18,.82) 70%),
  linear-gradient(180deg,rgba(6,10,18,.55),rgba(5,8,15,.94))}
+/* animated ambient background for every signed-in page */
+.panel-bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+ background:var(--bg)}
+.panel-bg .aurora{inset:-32%;opacity:.55;filter:blur(72px);will-change:transform}
+.panel-bg:after{content:"";position:absolute;inset:0;
+ background:radial-gradient(1100px 780px at 50% 8%,rgba(6,10,18,0),rgba(6,10,18,.52) 78%),
+ linear-gradient(180deg,rgba(6,10,18,.12),rgba(6,10,18,.46))}
 .aurora{position:absolute;inset:-20%;
  background:
  radial-gradient(46% 38% at 20% 24%,rgba(86,128,255,.5),transparent 62%),
@@ -538,7 +549,7 @@ body.connect .shell.auth-wrap{max-width:1120px;gap:18px}
  .logout-btn{width:100%;justify-content:center}
 }
 @media(max-width:760px){
- .g-2{grid-template-columns:1fr}
+ .g-2{grid-template-columns:minmax(0,1fr)}
  .shell{padding:24px 14px 64px}
  .card{padding:17px;border-radius:18px}
  .page-head{align-items:flex-start}

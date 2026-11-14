@@ -67,6 +67,10 @@ Three roles are enforced server-side:
   full-bleed clip with no card background. Registration uses the same
   full-bleed video treatment with its signup form overlaid. `POST /connect`
   remains the JSON SDK endpoint.
+- Every signed-in page carries a fixed animated aurora background behind the
+  shell and cards, so the panel keeps moving after login while tables and forms
+  stay readable. The animation is CSS-only and respects
+  `prefers-reduced-motion`.
 
 Existing installations upgrade through the idempotent v3 migration in
 `app/Migration.php`; `schema.sql` contains the same tables for fresh installs.
