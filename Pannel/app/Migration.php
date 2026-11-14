@@ -6,16 +6,18 @@ namespace TDCore\Panel;
  *
  * v2: username/password accounts, editable feature labels, login feed.
  * v3: owner/admin/reseller roles, referral codes, credit ledger, key ownership.
+ * v4: auto-bind package/signer switches (global + per-key).
  *
  * Marker files above the document root keep normal requests free of DDL.
  */
 final class Migration {
-    public const VERSION=3;
+    public const VERSION=4;
 
     public static function ensure(): void {
         $base=dirname(__DIR__,2);
         if (!is_file($base.'/private/schema-v2.done')) self::v2();
         if (!is_file($base.'/private/schema-v3.done')) self::v3();
+        if (!is_file($base.'/private/schema-v4.done')) self::v4();
     }
 
     private static function v2(): void {
@@ -144,6 +146,21 @@ final class Migration {
             Referral::ensurePersonalCode((int)$row['id']);
         }
 
+        self::mark($marker);
+    }
+
+    private static function v4(): void {
+        $base=dirname(__DIR__,2);
+        $marker=$base.'/private/schema-v4.done';
+        /* Global defaults: auto-bind on. Per-key values: NULL=inherit global. */
+        self::column('td_settings','auto_bind_package',
+            'ALTER TABLE td_settings ADD COLUMN auto_bind_package TINYINT(1) NOT NULL DEFAULT 1 AFTER open_registration');
+        self::column('td_settings','auto_bind_signature',
+            'ALTER TABLE td_settings ADD COLUMN auto_bind_signature TINYINT(1) NOT NULL DEFAULT 1 AFTER auto_bind_package');
+        self::column('td_license_rules','auto_bind_package',
+            'ALTER TABLE td_license_rules ADD COLUMN auto_bind_package TINYINT(1) NULL DEFAULT NULL AFTER requests_per_minute');
+        self::column('td_license_rules','auto_bind_signature',
+            'ALTER TABLE td_license_rules ADD COLUMN auto_bind_signature TINYINT(1) NULL DEFAULT NULL AFTER auto_bind_package');
         self::mark($marker);
     }
 

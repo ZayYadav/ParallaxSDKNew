@@ -2,6 +2,11 @@
 declare(strict_types=1);
 namespace TDCore\Panel;
 final class AdminLicenseController {
+    private static function abState(mixed $col): string {
+        /* DB stores NULL (inherit) / 0 (off) / 1 (on). */
+        return $col===null ? 'inherit' : ((int)$col===1 ? 'on' : 'off');
+    }
+
     private static function selectors(array $v): string {
         return '<div class="grid g-2">'.
         View::select('package_rule',(string)($v['package_rule']??'required'),[
@@ -15,6 +20,14 @@ final class AdminLicenseController {
         View::select('device_rule',(string)($v['device_rule']??'bind'),[
             'bind'=>'Strict: bind and cap devices',
             'unrestricted'=>'Optional: allow multiple devices (blacklist still applies)'], 'Device rule').
+        View::select('auto_bind_package',self::abState($v['auto_bind_package']??null),[
+            'inherit'=>'Auto-bind package: inherit global setting',
+            'on'=>'Auto-bind package: always on for this key',
+            'off'=>'Auto-bind package: off for this key'], 'Package auto-bind').
+        View::select('auto_bind_signature',self::abState($v['auto_bind_signature']??null),[
+            'inherit'=>'Auto-bind signer: inherit global setting',
+            'on'=>'Auto-bind signer: always on for this key',
+            'off'=>'Auto-bind signer: off for this key'], 'Signer auto-bind').
         View::field('Android package','package_name',$v['package_name']??'','text','maxlength="180" placeholder="com.example.app"').
         View::field('APK signing SHA-256','signing_sha256',$v['signing_sha256']??'','text','maxlength="64" placeholder="64 hex characters"').
         View::field('Max bound devices','max_devices',$v['max_devices']??1,'number','min="1" max="1000"').

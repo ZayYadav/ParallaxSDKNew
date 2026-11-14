@@ -75,6 +75,28 @@ Optional signed feature flags can be queried using
 Root / facade launch paths and the central `launchApk` path call online
 authorization, but runtime testing on real Android devices is still required.
 
+### Auto-bind package & signing SHA-256 (TDCore)
+
+The panel can lock a license to the first SDK that authorizes with it:
+
+- **Global switches** (`Admin → Settings`): *Auto-bind Android package* and
+  *Auto-bind signing SHA-256*. The first authorized `/connect` request from a
+  key with an empty package/signer binds the presented values, writes a
+  `license_bound` audit entry, and every later request must match exactly
+  (`PACKAGE_MISMATCH` / `SIGNER_MISMATCH` otherwise).
+- **Per-key switches** (`Admin → Licenses → Edit advanced enforcement`):
+  *inherit* (follow the global switch, the default), *on*, or *off*.
+- Saving a license with an empty package/signer field keeps the existing
+  binding; clearing it deliberately requires switching the rule to *Off*.
+
+On the SDK side the policy is only accepted after the native library
+re-measures the running APK with **no Java input**: the process name from
+`/proc/self/cmdline` must equal the signed package, and the SHA-256 of the
+signer certificate parsed from the APK Signing Block (v2/v3) of the mapped
+`base.apk` must equal the signed certificate fingerprint. A re-signed or
+repackaged APK is denied and permanently poisons the native guard. There is
+no offline path: with no panel response the feature mask stays 0.
+
 This is an ongoing migration from the old Node panel's much larger API.
 The PHP admin/license API is implemented; historical client portal and
 telemetry interfaces are not yet migrated. The new panel does not

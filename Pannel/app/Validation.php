@@ -62,6 +62,16 @@ final class Validation {
         }
         return self::integer($v['feature_mask']??$fallback,0,2147483647);
     }
+    /** Per-key auto-bind switch: inherit (NULL) follows the global setting. */
+    public static function autoBindRule(mixed $v): ?int {
+        $s=(string)($v??'inherit');
+        return match ($s) {
+            'inherit'=>null,
+            'on'=>1,
+            'off'=>0,
+            default=>throw new Deny('INVALID_AUTO_BIND_RULE',422),
+        };
+    }
     public static function choices(array $v): array {
         $package=self::rule($v['package_rule']??'required');
         $signer=self::rule($v['signer_rule']??'required');
@@ -71,8 +81,10 @@ final class Validation {
         $feature=self::featureMask($v);
         $pkg=self::package($v['package_name']??'');
         $cert=self::signer($v['signing_sha256']??'');
+        $abPkg=self::autoBindRule($v['auto_bind_package']??'inherit');
+        $abSig=self::autoBindRule($v['auto_bind_signature']??'inherit');
         if ($package==='required' && $pkg==='') throw new Deny('PACKAGE_REQUIRED',422);
         if ($signer==='required' && $cert==='') throw new Deny('SIGNER_REQUIRED',422);
-        return compact('package','signer','device','max','perMin','feature','pkg','cert');
+        return compact('package','signer','device','max','perMin','feature','pkg','cert','abPkg','abSig');
     }
 }

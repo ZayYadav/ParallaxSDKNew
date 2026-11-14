@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS td_settings (
  signup_bonus INT UNSIGNED NOT NULL DEFAULT 0,
  referral_bonus INT UNSIGNED NOT NULL DEFAULT 0,
  open_registration TINYINT(1) NOT NULL DEFAULT 1,
+ auto_bind_package TINYINT(1) NOT NULL DEFAULT 1,
+ auto_bind_signature TINYINT(1) NOT NULL DEFAULT 1,
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 INSERT INTO td_settings (id) VALUES (1) ON DUPLICATE KEY UPDATE id=id;
@@ -72,6 +74,8 @@ CREATE TABLE IF NOT EXISTS td_license_rules (
  signer_rule ENUM('required','if_present','disabled') NOT NULL DEFAULT 'required',
  device_rule ENUM('bind','unrestricted') NOT NULL DEFAULT 'bind',
  requests_per_minute SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+ auto_bind_package TINYINT(1) NULL DEFAULT NULL,
+ auto_bind_signature TINYINT(1) NULL DEFAULT NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  FOREIGN KEY (license_id) REFERENCES td_licenses(id) ON DELETE CASCADE

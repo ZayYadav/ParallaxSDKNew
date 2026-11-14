@@ -34,9 +34,18 @@ final class AdminSettingsController {
             .'<label><input type="checkbox" name="open_registration" value="1"'
               .((int)$s['open_registration']?' checked':'').'>
               Allow public registration without a referral link</label>'
-            .'<p class="muted small" style="margin:0">Key cost applies to every non-owner account.
-              Owner and unlimited accounts are never charged. Bonuses are funded by the owner and
-              do not decrease the owner balance.</p>'
+            .'<div class="grid g-2" style="margin:10px 0 0">'
+            .'<label><input type="checkbox" name="auto_bind_package" value="1"'
+              .((int)$s['auto_bind_package']?' checked':'').'>
+              Auto-bind Android package from first authorized SDK</label>'
+            .'<label><input type="checkbox" name="auto_bind_signature" value="1"'
+              .((int)$s['auto_bind_signature']?' checked':'').'>
+              Auto-bind signing SHA-256 from first authorized SDK</label>'
+            .'</div>'
+            .'<p class="muted small" style="margin:0">Auto-bind locks the package name and
+              APK signing SHA-256 the first time an SDK authorizes. Later builds signed
+              with a different key or package are denied. Key cost applies to every
+              non-owner account; owner and unlimited accounts are never charged.</p>'
             .'</section>'
             .'<div class="card"><div class="btn-row"><button type="submit">'.View::icon('check',16)
             .'Save global policy</button><span class="muted small">Saving bumps the policy

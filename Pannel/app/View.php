@@ -263,7 +263,20 @@ input,select,textarea{width:100%;margin-top:6px;background:#0a1220;color:var(--t
 input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(120,175,255,.72);
  box-shadow:0 0 0 4px rgba(106,167,255,.12)}
 input::placeholder{color:#5f7391}
-input[type=checkbox]{width:17px;height:17px;margin:0 9px 0 0;accent-color:#7fb0ff;vertical-align:-3px}
+/* Checkbox: global input rule sets appearance:none, so the native tick is
+ * invisible. Fully repaint it here: bordered box that lights up with a drawn
+ * tick when checked. width/height override the global 100% width. */
+input[type=checkbox]{width:17px;height:17px;flex:none;display:inline-block;
+ margin:2px 9px 0 0;padding:0;border:1.5px solid rgba(184,208,255,.42);border-radius:4.5px;
+ background:rgba(10,18,32,.75);vertical-align:-3px;cursor:pointer;
+ transition:border-color .15s ease,background-color .15s ease,box-shadow .15s ease}
+input[type=checkbox]:hover{border-color:rgba(140,180,255,.7)}
+input[type=checkbox]:focus-visible{outline:none;border-color:rgba(120,175,255,.9);
+ box-shadow:0 0 0 3px rgba(106,167,255,.22)}
+input[type=checkbox]:checked{border-color:#7fb0ff;background:#7fb0ff;
+ background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M4 9l3 3 6-6.5' fill='none' stroke='%23061120' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+ background-size:12px 12px;background-position:center;background-repeat:no-repeat}
+input[type=checkbox]:active{transform:scale(.92)}
 input[type=date]{color-scheme:dark}
 select{background-image:linear-gradient(45deg,transparent 50%,#8fa8c8 50%),
  linear-gradient(135deg,#8fa8c8 50%,transparent 50%);
@@ -418,8 +431,12 @@ body.register .auth-card input{padding:11px 13px;border-radius:12px;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
  box-shadow:0 10px 30px -16px rgba(0,0,0,.8)}
 body.register .auth-card input::placeholder{color:rgba(200,216,240,.65)}
-body.register .auth-card input[type=checkbox]{width:16px;height:16px;padding:0;margin:0 8px 0 0;
- box-shadow:none;accent-color:#6aa7ff}
+body.register .auth-card input[type=checkbox]{width:16px;height:16px;
+ margin:2px 8px 0 0;border-color:rgba(184,208,255,.5);background-color:rgba(4,9,17,.66);
+ box-shadow:none}
+body.register .auth-card input[type=checkbox]:checked{border-color:#6aa7ff;background-color:#6aa7ff;
+ background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='%23061120' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+ background-size:11px 11px}
 body.register .auth-bullets,
 body.register .auth-split{color:#dbe7fa;text-shadow:0 1px 12px rgba(0,0,0,.7)}
 body.register .auth-card .btn.ghost{background:rgba(6,11,20,.62);

@@ -12,6 +12,7 @@ final class License {
             $params=$scope;
         }
         return Database::all('SELECT l.*,p.package_rule,p.signer_rule,p.device_rule,p.requests_per_minute,
+          p.auto_bind_package,p.auto_bind_signature,
           (SELECT COUNT(*) FROM td_devices d WHERE d.license_id=l.id) AS device_count,
           a.username AS owner_name
           FROM td_licenses l
@@ -22,6 +23,7 @@ final class License {
 
     public static function list(): array {
         return Database::all('SELECT l.*,p.package_rule,p.signer_rule,p.device_rule,p.requests_per_minute,
+          p.auto_bind_package,p.auto_bind_signature,
           (SELECT COUNT(*) FROM td_devices d WHERE d.license_id=l.id) AS device_count,
           a.username AS owner_name
           FROM td_licenses l LEFT JOIN td_license_rules p ON p.license_id=l.id
@@ -30,7 +32,8 @@ final class License {
     }
 
     public static function findScoped(int $id,int $actorId): array {
-        $row=Database::one('SELECT l.*,p.package_rule,p.signer_rule,p.device_rule,p.requests_per_minute
+        $row=Database::one('SELECT l.*,p.package_rule,p.signer_rule,p.device_rule,p.requests_per_minute,
+            p.auto_bind_package,p.auto_bind_signature
             FROM td_licenses l LEFT JOIN td_license_rules p ON p.license_id=l.id
             WHERE l.id=?',[$id]);
         if (!$row) throw new Deny('UNKNOWN_LICENSE',404);
@@ -54,8 +57,10 @@ final class License {
                 $rules['feature'],$ownerAccountId
              ]);
             $id=(int)Database::db()->lastInsertId();
-            Database::run('INSERT INTO td_license_rules(license_id,package_rule,signer_rule,device_rule,requests_per_minute)
-              VALUES (?,?,?,?,?)',[$id,$rules['package'],$rules['signer'],$rules['device'],$rules['perMin']]);
+            Database::run('INSERT INTO td_license_rules(license_id,package_rule,signer_rule,device_rule,
+              requests_per_minute,auto_bind_package,auto_bind_signature)
+              VALUES (?,?,?,?,?,?,?)',[$id,$rules['package'],$rules['signer'],$rules['device'],
+              $rules['perMin'],$rules['abPkg'],$rules['abSig']]);
             Credit::spendWithin($ownerAccountId,$cost,'key_issue',
                 $label!==''?$label:'license #'.$id,$id);
             return $id;
@@ -80,6 +85,13 @@ final class License {
             /* Feature UI is gone; keep whatever mask the key already carries. */
             $r['feature']=(int)($lic['feature_mask']??0);
         }
+        /* Never erase an existing auto-bound package / signer because the edit
+         * form was saved with an empty field: an empty post keeps the current
+         * binding (admins clear it by switching the rule to Off). */
+        if ($r['pkg']==='' && (string)($lic['package_name']??'')!=='')
+            $r['pkg']=(string)$lic['package_name'];
+        if ($r['cert']==='' && (string)($lic['signing_sha256']??'')!=='')
+            $r['cert']=(string)$lic['signing_sha256'];
         $expiry=trim((string)($v['expires_at']??''));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$expiry))
             throw new Deny('INVALID_EXPIRY',422);
@@ -90,10 +102,14 @@ final class License {
             Database::run('UPDATE td_licenses SET max_devices=?,feature_mask=?,package_name=?,signing_sha256=?,expires_at=? WHERE id=?',[
                 $r['max'],$r['feature'],$r['pkg'],$r['cert'],$expiry.' 23:59:59',$id
             ]);
-            Database::run('INSERT INTO td_license_rules(license_id,package_rule,signer_rule,device_rule,requests_per_minute)
-             VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE package_rule=VALUES(package_rule),
-             signer_rule=VALUES(signer_rule),device_rule=VALUES(device_rule),requests_per_minute=VALUES(requests_per_minute)',[
-                $id,$r['package'],$r['signer'],$r['device'],$r['perMin']
+            Database::run('INSERT INTO td_license_rules(license_id,package_rule,signer_rule,device_rule,
+              requests_per_minute,auto_bind_package,auto_bind_signature)
+             VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE package_rule=VALUES(package_rule),
+             signer_rule=VALUES(signer_rule),device_rule=VALUES(device_rule),
+             requests_per_minute=VALUES(requests_per_minute),
+             auto_bind_package=VALUES(auto_bind_package),
+             auto_bind_signature=VALUES(auto_bind_signature)',[
+                $id,$r['package'],$r['signer'],$r['device'],$r['perMin'],$r['abPkg'],$r['abSig']
             ]);
             Database::run('UPDATE td_settings SET policy_version=policy_version+1 WHERE id=1');
         });
@@ -109,8 +125,9 @@ final class License {
            FROM td_licenses l LEFT JOIN td_license_rules r ON r.license_id=l.id WHERE l.key_digest=?',[$digest]);
         if (!$candidate) throw new Deny('INVALID_LICENSE',401);
         RateLimit::hit('license:'.$candidate['id'],(int)$candidate['limit_per_minute'],60);
-        $data=Database::transaction(static function () use ($digest,$v): array {
-            $l=Database::one('SELECT l.*,r.package_rule,r.signer_rule,r.device_rule
+        $data=Database::transaction(static function () use ($digest,$v,$settings): array {
+            $l=Database::one('SELECT l.*,r.package_rule,r.signer_rule,r.device_rule,
+                r.auto_bind_package AS rule_ab_pkg,r.auto_bind_signature AS rule_ab_sig
               FROM td_licenses l LEFT JOIN td_license_rules r ON r.license_id=l.id
               WHERE l.key_digest=? FOR UPDATE',[$digest]);
             if (!$l) throw new Deny('INVALID_LICENSE',401);
@@ -120,8 +137,30 @@ final class License {
             $p=$l['package_rule']??'if_present';
             $s=$l['signer_rule']??'if_present';
             $d=$l['device_rule']??'bind';
-            self::matchRule($p,(string)$l['package_name'],$v['pkg'],'PACKAGE_MISMATCH');
-            self::matchRule($s,strtoupper((string)$l['signing_sha256']),$v['cert'],'SIGNER_MISMATCH');
+            /* Auto-bind: NULL per-key value inherits the global setting. The first
+             * authorized request locks the presented package / signing SHA-256 onto
+             * the key; every later request must match or is denied. */
+            $abPkg=$l['rule_ab_pkg']===null ? (bool)(int)$settings['auto_bind_package']
+                : (bool)(int)$l['rule_ab_pkg'];
+            $abSig=$l['rule_ab_sig']===null ? (bool)(int)$settings['auto_bind_signature']
+                : (bool)(int)$l['rule_ab_sig'];
+            $boundPkg=(string)$l['package_name'];
+            $boundCert=strtoupper((string)$l['signing_sha256']);
+            $newBindings=[];
+            if ($boundPkg==='' && $p!=='disabled' && $abPkg && $v['pkg']!=='') $newBindings['package_name']=$v['pkg'];
+            if ($boundCert==='' && $s!=='disabled' && $abSig && $v['cert']!=='') $newBindings['signing_sha256']=$v['cert'];
+            if ($newBindings) {
+                $sets=implode(',',array_map(static fn($c)=>"$c=?",array_keys($newBindings)));
+                Database::run("UPDATE td_licenses SET $sets WHERE id=?",
+                    [...array_values($newBindings),(int)$l['id']]);
+                if (isset($newBindings['package_name'])) $boundPkg=$newBindings['package_name'];
+                if (isset($newBindings['signing_sha256'])) $boundCert=$newBindings['signing_sha256'];
+                Audit::write('license_bound','sdk',(int)$l['id'],
+                    'package '.($newBindings['package_name']??'kept').
+                    ' · signer '.($newBindings['signing_sha256']?'bound':'kept'));
+            }
+            self::matchRule($p,$boundPkg,$v['pkg'],'PACKAGE_MISMATCH');
+            self::matchRule($s,$boundCert,$v['cert'],'SIGNER_MISMATCH');
             Device::ensure($l,$v,$d);
             // Nonces prevent reuse of the same challenge within the short lease.
             Database::run('DELETE FROM td_used_nonces WHERE created_at<UTC_TIMESTAMP()-INTERVAL 5 MINUTE');

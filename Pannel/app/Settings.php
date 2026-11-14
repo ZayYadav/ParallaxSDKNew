@@ -13,6 +13,9 @@ final class Settings {
         $features=$hasFeatureInput
             ? Validation::featureMask($v,0)
             : (int)$current['default_features'];
+        /* Preserve auto-bind settings when not posted */
+        $autoBindPackage = !empty($v['auto_bind_package']) ? (int)$v['auto_bind_package'] : (int)$current['auto_bind_package'];
+        $autoBindSignature = !empty($v['auto_bind_signature']) ? (int)$v['auto_bind_signature'] : (int)$current['auto_bind_signature'];
         $notice=mb_substr(trim((string)($v['notice']??'')),0,255);
         $keyCost=self::bounded($v['key_cost']??1,0,100000);
         $signupBonus=self::bounded($v['signup_bonus']??0,0,100000);
@@ -20,9 +23,12 @@ final class Settings {
         $open=!empty($v['open_registration'])?1:0;
         Database::run('UPDATE td_settings SET enabled=?,maintenance=?,notice=?,default_features=?,
             key_cost=?,signup_bonus=?,referral_bonus=?,open_registration=?,
+            auto_bind_package=?,
+            auto_bind_signature=?,
             policy_version=policy_version+1 WHERE id=1',[
             !empty($v['enabled'])?1:0,!empty($v['maintenance'])?1:0,$notice,$features,
-            $keyCost,$signupBonus,$referralBonus,$open
+            $keyCost,$signupBonus,$referralBonus,$open,
+            $autoBindPackage,$autoBindSignature
         ]);
         Audit::write('settings_update','panel',null,
             'default features '.$features.' · key cost '.$keyCost.' · signup '.$signupBonus.
