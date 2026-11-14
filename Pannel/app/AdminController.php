@@ -280,30 +280,15 @@ final class AdminController {
     public static function loginPage(): never {
         Auth::session();
         if (!empty($_SESSION['admin'])) Http::redirect('/admin');
-        $expired=isset($_GET['expired']);
-        $body='<section class="card auth-card"><div class="auth-head">
-          <span class="brand"><span class="brand-mark">'.View::icon('logo',22).'</span>
-          <span><span class="t">TDCore</span><small>Licensing control</small></span></span>
-          <h1><span class="grad">Welcome back</span></h1>
-          <p>Sign in with your account username and password.</p></div>'
-          .($expired?'<div class="flash">'.View::icon('clock',18)
-            .'<span>Session expired. Please sign in again.</span></div>':'')
+        $body='<section class="card auth-card auth-card-min">'
           .'<form method="post" action="/admin/login">'.View::csrf()
+          .'<h1 class="auth-welcome"><span class="grad">Welcome</span></h1>'
           .View::field('Username','username','','text',
-            'required autofocus autocomplete="username" maxlength="60" placeholder="admin"')
+            'required autofocus autocomplete="username" maxlength="60"')
           .View::field('Password','password','','password',
-            'required autocomplete="current-password" placeholder="••••••••••"')
-          .'<button type="submit" style="width:100%;margin-top:4px">'
-          .View::icon('lock',16).'Sign in securely</button></form>
-          <div class="auth-split"><span></span><em>new here</em><span></span></div>
-          <a class="btn ghost" style="width:100%" href="/register">'.View::icon('user',16)
-          .'Create an account</a>
-          <ul class="auth-bullets">
-          <li>'.View::icon('shield',15).'Signed ECDSA P-256 policy leases</li>
-          <li>'.View::icon('users',15).'Owner, admin and reseller roles</li>
-          <li>'.View::icon('activity',15).'Login tracking and audit trail</li>
-          </ul></section>';
-        View::page('Sign in',$body,false,'','','/assets/tdcore.mp4','auth login');
+            'required autocomplete="current-password"')
+          .'<button type="submit" class="auth-submit">Login</button></form></section>';
+        View::page('Login',$body,false,'','','/assets/tdcore.mp4','auth login');
     }
     public static function login(): never {
         Auth::csrfCheck();

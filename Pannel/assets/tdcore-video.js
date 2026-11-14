@@ -1,146 +1,105 @@
 /*
- * TDCore background video sound control.
+ * TDCore background video: always plays with sound.
  *
- * Browsers only allow audible autoplay after a user gesture, so the clip starts
- * muted and loops. The first tap/key press (or the sound pill) unmutes it. The
- * choice is remembered for the session so login, register and /connect keep
- * playing with sound as you move through the panel.
+ * Browsers only allow audible autoplay after a user gesture or once the site
+ * has enough media engagement. The clip therefore starts muted and loops, then
+ * unmutes itself at the first tap, key press or click. Once the sound is on it
+ * stays on for the rest of the visit; there is no mute control.
  */
 (function () {
     'use strict';
 
     var video = document.querySelector('.bg-video');
-    var toggle = document.querySelector('[data-sound-toggle]');
     if (!video) return;
 
-    var STORAGE_KEY = 'tdcore-video-sound';
-    var intended = false;
-    try { intended = window.sessionStorage.getItem(STORAGE_KEY) === '1'; } catch (ignored) {}
-
-    function remember(on) {
-        try { window.sessionStorage.setItem(STORAGE_KEY, on ? '1' : '0'); } catch (ignored) {}
-    }
+    var GESTURES = ['pointerdown', 'touchstart', 'keydown', 'click'];
+    var unlock = null;
+    var soundIsOn = false;
 
     function hasAudioTrack() {
         if (video.getAttribute('data-audio') !== '1') return false;
         if (video.currentSrc && video.currentSrc.indexOf('tdcore-brand') !== -1) return false;
-        try {
-            if (video.mozHasAudio) return true;
-            if (video.audioTracks && video.audioTracks.length > 0) return true;
-            if (typeof video.webkitAudioDecodedByteCount === 'number' &&
-                video.webkitAudioDecodedByteCount > 0) return true;
-        } catch (ignored) {}
         return true;
     }
 
-    function label(on) {
-        if (!toggle) return;
-        var text = toggle.querySelector('span');
-        if (text) text.textContent = on ? 'Sound off' : 'Sound on';
-        toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
-        toggle.classList.toggle('is-on', on);
-        toggle.title = on ? 'Mute the background clip' : 'Play the background clip with sound';
-    }
-
     function play() {
-        try { return video.play(); } catch (ignored) { return null; }
-    }
-
-    function apply(on) {
-        intended = on;
-        video.muted = !on;
-        video.volume = on ? 1 : 0;
-        var attempt = play();
-        label(on);
-        return attempt;
-    }
-
-    function setSound(on) {
-        var attempt = apply(on);
-        remember(on);
-        return attempt;
-    }
-
-    function showToggle() {
-        if (!toggle) return;
-        toggle.hidden = !hasAudioTrack();
-    }
-
-    /* Chrome exposes whether audible autoplay is allowed for this site. */
-    function autoplayAllowsSound() {
         try {
-            if (typeof navigator.getAutoplayPolicy === 'function') {
-                return navigator.getAutoplayPolicy('mediaelement') === 'allowed';
+            var attempt = video.play();
+            if (attempt && typeof attempt.catch === 'function') {
+                attempt.catch(function () {});
             }
         } catch (ignored) {}
-        return false;
     }
 
-    /* A real gesture is the only reliable way to start audible playback. */
-    var GESTURES = ['pointerdown', 'touchstart', 'keydown', 'click'];
-    var unlock = null;
-
-    function stopAutoUnlock() {
-        if (unlock) {
-            GESTURES.forEach(function (name) {
-                document.removeEventListener(name, unlock, true);
-            });
-            unlock = null;
-        }
+    function stopUnlock() {
+        if (!unlock) return;
+        GESTURES.forEach(function (name) {
+            document.removeEventListener(name, unlock, true);
+        });
+        unlock = null;
     }
 
-    function armAutoUnlock() {
-        unlock = function (event) {
-            /* Let the sound pill handle its own clicks. */
-            if (toggle && event && event.target && toggle.contains(event.target)) return;
-            if (!hasAudioTrack()) return;
-            var attempt = setSound(true);
-            if (attempt && typeof attempt.then === 'function') {
-                attempt.then(function () {
-                    if (!video.muted) stopAutoUnlock();
-                }).catch(function () {
-                    /* This gesture was not accepted as audio activation; the
-                     * next pointer/click/key attempt stays armed. */
-                    video.muted = true;
-                    video.volume = 0;
-                    label(false);
-                });
-            } else {
-                stopAutoUnlock();
-            }
+    /* Policy rejected audible playback: stay muted and wait for a real gesture. */
+    function waitForGesture() {
+        video.muted = true;
+        video.volume = 0;
+        play();
+        if (unlock) return;
+        unlock = function () {
+            attemptSound();
         };
         GESTURES.forEach(function (name) {
             document.addEventListener(name, unlock, true);
         });
     }
 
-    if (toggle) {
-        toggle.addEventListener('click', function () {
-            stopAutoUnlock();
-            if (!hasAudioTrack()) return;
-            setSound(!intended);
-        });
+    function attemptSound() {
+        if (soundIsOn) {
+            stopUnlock();
+            return;
+        }
+        if (!hasAudioTrack()) {
+            stopUnlock();
+            return;
+        }
+        video.muted = false;
+        video.volume = 1;
+        var attempt;
+        try {
+            attempt = video.play();
+        } catch (ignored) {
+            waitForGesture();
+            return;
+        }
+        if (attempt && typeof attempt.then === 'function') {
+            attempt.then(function () {
+                if (!video.muted && !video.paused) {
+                    soundIsOn = true;
+                    stopUnlock();
+                } else {
+                    waitForGesture();
+                }
+            }).catch(function () {
+                waitForGesture();
+            });
+        } else if (!video.muted) {
+            soundIsOn = true;
+            stopUnlock();
+        }
     }
 
-    video.addEventListener('loadedmetadata', function () {
-        showToggle();
-        /* Never unmute here: without a gesture Chromium pauses the clip. */
-        label(intended && hasAudioTrack());
-    });
+    /* Chrome exposes whether audible autoplay is allowed for this site. */
+    function start() {
+        if (!hasAudioTrack()) return;
+        /* Try audible playback now; if policy rejects it the clip stays muted
+         * and the first tap, key press or click unmutes it for good. */
+        attemptSound();
+    }
 
-    /* Keep the pill in sync with native controls or policy-driven pauses. */
+    if (video.readyState >= 1) start();
+    else video.addEventListener('loadedmetadata', start, { once: true });
+
     video.addEventListener('volumechange', function () {
-        if (video.muted) label(false);
-        else if (intended) label(true);
+        if (video.muted) soundIsOn = false;
     });
-
-    label(false);
-    showToggle();
-    if (hasAudioTrack() && autoplayAllowsSound()) {
-        /* The site has enough media engagement to autoplay with sound. */
-        stopAutoUnlock();
-        setSound(true);
-    } else {
-        armAutoUnlock();
-    }
 })();

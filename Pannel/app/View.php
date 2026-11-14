@@ -104,8 +104,8 @@ final class View {
               .'<footer class="foot"><span>TDCore · signed policy engine</span><span>UTC '
               .self::e(gmdate('Y-m-d H:i')).' · PHP '.self::e(PHP_VERSION).'</span></footer>'
             : '<main class="shell auth-wrap">'.$flash.$body
-              .'<div class="auth-foot">TDCore licensing · ECDSA P-256 signed leases · '
-              .self::e(gmdate('Y')).'</div></main>';
+              .(str_contains($bodyClass,'login')?'':'<div class="auth-foot">TDCore licensing · ECDSA P-256 signed leases · '
+              .self::e(gmdate('Y')).'</div>').'</main>';
         $classes=trim(($admin?'':"auth").' '.$bodyClass);
         $stage=$video!==''?self::videoStage($video):'';
         $html='<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -126,9 +126,6 @@ final class View {
             .'<source src="'.self::e($src).'" type="video/mp4">'
             .'<source src="/assets/tdcore-brand.mp4" type="video/mp4">'
             .'</video><div class="video-veil"></div></div>'
-            .'<button type="button" class="sound-toggle" data-sound-toggle hidden'
-            .' aria-pressed="false" aria-label="Toggle background video sound">'
-            .self::icon('volume',15).'<span>Sound on</span></button>'
             .'<script src="/assets/tdcore-video.js" defer></script>';
     }
     private static function topbar(): string {
@@ -405,27 +402,30 @@ body.auth{display:grid;place-items:center;padding:28px 18px;min-height:100vh}
 body.login{display:block;padding:0;min-height:100vh;overflow-x:hidden}
 body.login .bg-video{opacity:1;filter:saturate(1.06) contrast(1.04)}
 body.login .video-veil{background:
- linear-gradient(90deg,rgba(4,8,15,.66) 0%,rgba(4,8,15,.34) 34%,
-   rgba(4,8,15,.08) 58%,rgba(4,8,15,.30) 100%),
- linear-gradient(180deg,rgba(4,8,15,.22),rgba(4,8,15,.48))}
-body.login .shell.auth-wrap{max-width:none;width:100%;min-height:100vh;
- padding:26px clamp(18px,5vw,84px);justify-content:center;align-items:flex-end}
-body.login .auth-card{max-width:400px;width:100%;margin:0;
- background:linear-gradient(160deg,rgba(16,25,42,.62),rgba(7,12,22,.74));
- border:1px solid rgba(154,190,255,.34);
- backdrop-filter:blur(24px) saturate(1.25);
- -webkit-backdrop-filter:blur(24px) saturate(1.25);
- box-shadow:0 44px 90px -40px #000,0 0 90px -50px rgba(106,167,255,.6)}
-body.login .auth-card input,
-body.login .auth-card select{background:rgba(5,10,19,.72)}
-body.login .auth-foot{color:#a9bdd6}
+ linear-gradient(180deg,rgba(4,8,15,.34) 0%,rgba(4,8,15,.16) 40%,rgba(4,8,15,.56) 100%),
+ radial-gradient(1200px 820px at 50% 45%,rgba(4,8,15,.04),rgba(4,8,15,.48) 82%)}
+body.login .shell.auth-wrap{max-width:none;width:100%;min-height:100vh;min-height:100dvh;
+ padding:24px;justify-content:center;align-items:center}
+body.login .auth-card{max-width:340px;width:100%;margin:0;padding:26px 24px 24px;
+ border-radius:22px;
+ background:linear-gradient(160deg,rgba(16,25,42,.60),rgba(7,12,22,.72));
+ border:1px solid rgba(154,190,255,.32);
+ backdrop-filter:blur(22px) saturate(1.25);
+ -webkit-backdrop-filter:blur(22px) saturate(1.25);
+ box-shadow:0 44px 90px -40px #000,0 0 90px -50px rgba(106,167,255,.55)}
+body.login .auth-welcome{font-size:30px;line-height:1.1;text-align:center;
+ letter-spacing:-.02em;margin:0 0 20px}
+body.login .auth-card label{margin-bottom:14px}
+body.login .auth-card input{background:rgba(5,10,19,.68);padding:12px 14px}
+body.login .auth-submit{width:100%;margin-top:6px;padding:13px;border-radius:12px;
+ letter-spacing:.01em;font-weight:800}
 @media(max-width:760px){
  body.login .shell.auth-wrap{align-items:center;justify-content:flex-end;
-   padding:16px 14px max(28px,env(safe-area-inset-bottom,28px))}
+   padding:16px 14px max(26px,env(safe-area-inset-bottom,26px))}
  body.login .video-veil{background:
-   linear-gradient(180deg,rgba(4,8,15,.30) 0%,rgba(4,8,15,.24) 42%,rgba(4,8,15,.86) 100%)}
- body.login .auth-card{max-width:480px;
-   background:linear-gradient(165deg,rgba(14,22,38,.74),rgba(7,12,22,.86))}
+   linear-gradient(180deg,rgba(4,8,15,.28) 0%,rgba(4,8,15,.18) 40%,rgba(4,8,15,.80) 100%)}
+ body.login .auth-card{max-width:440px;
+   background:linear-gradient(165deg,rgba(14,22,38,.72),rgba(7,12,22,.84))}
 }
 .foot{max-width:1260px;margin:0 auto;padding:0 20px 34px;color:var(--dim);font-size:11.5px;
  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
@@ -436,17 +436,6 @@ body.login .auth-foot{color:#a9bdd6}
 .video-veil{position:absolute;inset:0;
  background:radial-gradient(900px 620px at 50% 0%,rgba(6,10,18,.15),rgba(6,10,18,.82) 70%),
  linear-gradient(180deg,rgba(6,10,18,.55),rgba(5,8,15,.94))}
-.sound-toggle{position:fixed;right:18px;bottom:max(18px,env(safe-area-inset-bottom,18px));
- z-index:9;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;
- font:inherit;font-size:12px;font-weight:700;letter-spacing:.01em;color:#e2eeff;
- background:rgba(8,14,25,.78);border:1px solid rgba(140,180,255,.45);cursor:pointer;
- backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
- box-shadow:0 12px 32px rgba(0,0,0,.4);transition:.18s ease}
-.sound-toggle[hidden]{display:none}
-.sound-toggle:hover{border-color:rgba(170,205,255,.8);transform:translateY(-1px)}
-.sound-toggle.is-on{color:#0a1220;background:linear-gradient(135deg,#9dc4ff,#c9b8ff);
- border-color:transparent}
-.sound-toggle svg{flex:none}
 .aurora{position:absolute;inset:-20%;
  background:
  radial-gradient(46% 38% at 20% 24%,rgba(86,128,255,.5),transparent 62%),

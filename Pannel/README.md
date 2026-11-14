@@ -27,9 +27,9 @@ installs.
 
 `TD_ADMIN_PASSWORD_HASH` is only used to seed the first account. After that,
 change passwords from **Security center**. The UI stays CSS-only apart from one
-small self-hosted helper, `/assets/tdcore-video.js`, which controls background
-video sound. The strict CSP allows `script-src 'self'` and still forbids inline
-scripts.
+small self-hosted helper, `/assets/tdcore-video.js`, which turns the background
+video sound on at the first gesture. The strict CSP allows `script-src 'self'`
+and still forbids inline scripts.
 
 ## Panel v3: registration, referrals, roles and credits
 
@@ -60,11 +60,12 @@ Three roles are enforced server-side:
 - Login, registration and `GET /connect` share a full-screen looping
   background video (`assets/tdcore-brand.mp4`, poster
   `assets/tdcore-poster.jpg`) with a CSS animated-gradient fallback. Browser
-  autoplay policy forces the clip to start muted; the sound pill or the first
-  tap/key press enables audio, and the choice is kept for the session with
-  `sessionStorage`. Playback is ignored when the browser blocks video entirely.
-  The login page shows the clip full-bleed with a translucent sign-in panel
-  floating over it; register and `/connect` keep the centred card layout.
+  autoplay policy forces the clip to start muted; the first tap, key press or
+  click turns the sound on and it stays on, with no mute control to manage.
+  Playback is ignored when the browser blocks video entirely.
+  The login page is intentionally reduced to `Welcome`, the username and
+  password fields and the `Login` button, with the clip full-bleed behind a
+  compact glass panel; register and `/connect` keep the centred card layout.
   `POST /connect` remains the JSON SDK endpoint.
 
 Existing installations upgrade through the idempotent v3 migration in
