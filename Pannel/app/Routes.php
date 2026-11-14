@@ -34,8 +34,6 @@ final class Routes {
         $r->add('GET','/admin/settings',static fn()=>AdminSettingsController::page());
         $r->add('POST','/admin/settings',static fn()=>AdminSettingsController::update());
         $r->add('POST','/admin/settings/revoke-all',static fn()=>AdminSettingsController::revokeAll());
-        $r->add('GET','/admin/features',static fn()=>AdminFeatureController::page());
-        $r->add('POST','/admin/features',static fn()=>AdminFeatureController::update());
         $r->add('GET','/admin/security',static fn()=>AdminSecurityController::page());
         $r->add('POST','/admin/security/password',static fn()=>AdminSecurityController::changePassword());
         $r->add('POST','/admin/security/admins/create',static fn()=>AdminSecurityController::createAdmin());

@@ -19,8 +19,8 @@ final class AdminLicenseController {
         View::field('APK signing SHA-256','signing_sha256',$v['signing_sha256']??'','text','maxlength="64" placeholder="64 hex characters"').
         View::field('Max bound devices','max_devices',$v['max_devices']??1,'number','min="1" max="1000"').
         View::field('Requests per minute','requests_per_minute',$v['requests_per_minute']??30,'number','min="1" max="600"').
-        '</div>'.View::featureChoices((int)($v['feature_mask']??0)).
-        '<p class="muted small">For strict mode, enter an allowed package and signer fingerprint.
+        '</div>'
+        .'<p class="muted small">For strict mode, enter an allowed package and signer fingerprint.
         Disabling a restriction reduces assurance. Expiry, signature checks, nonce binding and
         online authorization always stay mandatory.</p>';
     }
@@ -97,7 +97,7 @@ final class AdminLicenseController {
                 $actions='<span class="badge info">read only</span>';
             }
             $rows.='<tr><td><strong>#'.$id.'</strong><p class="dim small">'.View::e($l['label']).'</p>'
-                .$owner.'<div class="btn-row" style="margin-top:6px">'.View::maskChips((int)$l['feature_mask']).'</div></td>
+                .$owner.'</td>
                 <td>'.View::badge($status).'</td>
                 <td>'.View::e($l['device_count']).' / '.View::e($l['max_devices']).'</td>
                 <td><span class="badge '.$expTone.'">'.$expLabel.'</span>
@@ -113,10 +113,9 @@ final class AdminLicenseController {
             <th>Expiry</th><th>Policy &amp; actions</th></tr></thead><tbody>'.$rows.'</tbody></table></div></section>';
 
         View::page('Licenses and keys',$stats.$newCard.$generate.$list,true,
-            $staff?'Issue keys, tune per-key enforcement and manage signed feature masks.'
+            $staff?'Issue keys and tune per-key enforcement.'
                   :'Generate keys, watch expiry and copy the one-time secret.',
-            '<a class="btn ghost" href="/admin/credits">'.View::icon('coin',16).'Credits</a>'
-            .($staff?'<a class="btn ghost" href="/admin/features">'.View::icon('chip',16).'Feature labels</a>':''));
+            '<a class="btn ghost" href="/admin/credits">'.View::icon('coin',16).'Credits</a>');
     }
 
     public static function create(): never {

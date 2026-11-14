@@ -146,7 +146,6 @@ final class AdminController {
             <dt>Service</dt><dd>'.((int)$settings['enabled']?'Enabled':'Disabled')
               .' · maintenance '.((int)$settings['maintenance']?'ON':'OFF').'</dd>
             <dt>Policy revision</dt><dd>v'.View::e($settings['policy_version']).'</dd>
-            <dt>Default flags</dt><dd>'.View::maskChips((int)$settings['default_features']).'</dd>
             <dt>Key cost</dt><dd>'.number_format(Credit::keyCost()).' credits per key</dd>
             <dt>Signing key</dt><dd><span class="badge '.($key['ok']?'active':'revoked').'">'
               .($key['ok']?'P-256 healthy':'problem').'</span> '.View::e($key['curve']).'</dd>

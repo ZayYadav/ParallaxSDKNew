@@ -8,7 +8,6 @@ final class AdminSettingsController {
         $on=(int)$s['enabled']?' checked':'';
         $mt=(int)$s['maintenance']?' checked':'';
         $expiring=Settings::expiringSoon();
-        $defaultMask=(int)$s['default_features'];
         $form='<form method="post" action="/admin/settings">'.View::csrf()
             .'<section class="card"><div class="card-head"><div><h2>Service state</h2>
               <p>These switches gate every SDK authorization request immediately.</p></div>'
@@ -39,14 +38,6 @@ final class AdminSettingsController {
               Owner and unlimited accounts are never charged. Bonuses are funded by the owner and
               do not decrease the owner balance.</p>'
             .'</section>'
-            .'<section class="card"><div class="card-head"><div><h2>Default feature flags</h2>
-              <p>Used when a license has an empty feature mask. Uploaded inside the signed policy.</p></div>'
-              .'<a class="badge info" href="/admin/features">Edit labels</a></div>'
-            .View::featureChoices($defaultMask)
-            .'<p class="muted small" style="margin:14px 0 0">Current default mask:
-              <code>'.$defaultMask.'</code> · policy revision
-              <code>'.View::e($s['policy_version']).'</code></p>'
-            .'</section>'
             .'<div class="card"><div class="btn-row"><button type="submit">'.View::icon('check',16)
             .'Save global policy</button><span class="muted small">Saving bumps the policy
             revision; signed leases expire within 60 seconds.</span></div></div></form>';
@@ -69,8 +60,6 @@ final class AdminSettingsController {
             <dt>Status</dt><dd>'.((int)$s['enabled']?'Enabled':'Disabled').' · maintenance '
               .((int)$s['maintenance']?'ON':'OFF').'</dd>
             <dt>Policy revision</dt><dd>v'.View::e($s['policy_version']).'</dd>
-            <dt>Default mask</dt><dd><code>'.$defaultMask.'</code></dd>
-            <dt>Enabled flags</dt><dd>'.View::maskChips($defaultMask).'</dd>
             <dt>Expiring soon</dt><dd>'.$expiring.' license(s) in the next 7 days</dd>
             <dt>Key cost</dt><dd>'.number_format((int)$s['key_cost']).' credits</dd>
             <dt>Signup / referral</dt><dd>'.View::e($s['signup_bonus']).' / '
@@ -81,7 +70,7 @@ final class AdminSettingsController {
 
         View::page('Global settings',$form.'<div class="grid g-2" style="margin-top:18px">'
             .$snapshot.$danger.'</div>',true,
-            'Master switches, signed feature defaults and emergency controls.');
+            'Master switches and emergency controls.');
     }
     public static function update(): never {
         Auth::requireStaff(); Auth::csrfCheck();

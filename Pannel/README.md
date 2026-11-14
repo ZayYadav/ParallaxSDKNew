@@ -3,7 +3,7 @@
 This is a new, **fail-closed online-license** implementation, not a drop-in
 replacement for all 46 historical Node/Neon APIs. It provides a PHP admin
 dashboard, SQL-backed license records, device quotas, package/signing-hash
-restrictions, feature bitmasks, global maintenance, revocation and audit logs.
+restrictions, global maintenance, revocation and audit logs.
 The SDK uses a 60-second server-signed P-256 ECDSA lease. No server private
 key is distributed to the SDK.
 
@@ -19,9 +19,9 @@ seeded from `TD_ADMIN_USERNAME` and `TD_ADMIN_PASSWORD_HASH` by
 folder above the document root so normal requests run no DDL.
 
 New pages: `/admin/security` (password change, admin accounts, login history,
-signing-key health), `/admin/features` (rename the 31 signed feature bits) and
+signing-key health) and
 a rebuilt dashboard, sticky navbar, responsive mobile navigation and audit
-trail. `td_feature_flags`, `td_admins` and `td_login_events` are created
+trail. `td_admins` and `td_login_events` are created
 automatically by the migration and are also present in `schema.sql` for fresh
 installs.
 
@@ -238,7 +238,7 @@ is the browser landing page. Registration closes automatically when
 - Signing certificate: same strict/optional/disabled choices.
 - Device rule: `bind` with maximum devices or `unrestricted`.
   Device blacklist continues to apply regardless of mode.
-- Per-key request rate limit, feature-mask bits, expiry, global maintenance,
+- Per-key request rate limit, expiry, global maintenance,
   key revocation, one-time license key generation and security audit.
 
 **Hard requirements that cannot be switched off per license:** an active,
@@ -247,11 +247,11 @@ server; 60-second lease; online check and failure-closed behavior. All admin
 mutations require an authenticated session and CSRF token. IPs and device
 bindings are stored only as keyed HMAC-SHA256 digests.
 
-The license **feature mask** is signed in the policy. Native SDK APIs expose
-the verified mask, but a particular SDK operation is controlled by a bit
-only when the corresponding SDK entry point explicitly checks that bit.
-Do not treat enabling a checkbox as magic control of every Android method.
-New strict-mode keys require explicit Android package and certificate SHA-256.
+The signed policy still carries a `features` mask for SDK compatibility, but
+the panel no longer exposes feature-bit screens: the stored mask stays at its
+database value (`0` on fresh installs) and the SDK only acts on a bit when its
+own code explicitly checks that bit. New strict-mode keys require explicit
+Android package and certificate SHA-256.
 
 On upgrade, re-import `schema.sql` to create the new tables, or let the
 idempotent migration add the v3 columns (`td_admins.role/parent_id/credits`,

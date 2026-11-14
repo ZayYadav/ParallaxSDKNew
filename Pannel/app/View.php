@@ -58,34 +58,6 @@ final class View {
         $tone=$map[$s]??'neutral';
         return '<span class="badge '.$tone.'"><span class="dotmark"></span>'.self::e($status).'</span>';
     }
-    public static function maskChips(int $mask): string {
-        if ($mask===0) return '<span class="badge neutral">no feature bits</span>';
-        $html='';
-        foreach (FeatureFlags::describe($mask) as $f) {
-            $html.='<span class="badge info" title="Bit '.$f['bit'].' = '.(1<<$f['bit']).'">'.self::e($f['label']).'</span>';
-        }
-        return $html;
-    }
-    /** Render 31 individually selectable signed feature bits, without JS. */
-    public static function featureChoices(int $mask): string {
-        $flags=FeatureFlags::all();
-        $html='<fieldset style="margin-top:18px"><legend>Signed SDK feature flags</legend>
-          <input type="hidden" name="feature_selection" value="1">
-          <p class="muted small" style="margin:0 0 12px">Each bit is sent inside the ECDSA-signed policy.
-          Select the capabilities you want this key (or the global default) to carry.</p>
-          <div class="flags">';
-        for ($i=0;$i<=FeatureFlags::MAX_BIT;$i++) {
-            $checked=($mask & (1 << $i))!==0?' checked':'';
-            $html.='<label class="flag" title="'.self::e($flags[$i]['description']).'">
-              <input type="checkbox" name="feature_bits[]" value="'.$i.'"'.$checked.'>
-              <span class="bit">BIT '.$i.'</span>
-              <span class="name">'.self::e($flags[$i]['label']).'</span>
-              <span class="val">'.(1 << $i).'</span></label>';
-        }
-        return $html.'</div><p class="muted small" style="margin:12px 0 4px">Bit 0 = 1, bit 1 = 2,
-          bit 2 = 4, and so on. Empty selection inherits the global default mask when it is nonzero.
-          Enabling a bit does not add a server-side check by itself: the SDK must implement that gate.</p></fieldset>';
-    }
     public static function stat(string $label,mixed $value,string $hint='',string $icon='grid',string $tone=''): string {
         return '<section class="card stat '.self::e($tone).'"><div class="top"><span class="chip">'.self::icon($icon,17).
             '</span>'.self::e($label).'</div><div class="value">'.self::e($value).'</div><p class="hint">'.self::e($hint).'</p></section>';
@@ -301,19 +273,6 @@ fieldset{border:1px solid var(--stroke);border-radius:var(--r);padding:15px 16px
  margin:0;background:rgba(8,14,25,.45)}
 legend{padding:0 8px;font-size:10.5px;font-weight:800;letter-spacing:.16em;
  text-transform:uppercase;color:var(--muted)}
-/* feature flags */
-.flags{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:9px}
-.flag{display:flex;align-items:center;gap:9px;margin:0;padding:9px 11px;border-radius:11px;
- border:1px solid var(--stroke);background:rgba(255,255,255,.025);font-size:12.5px;
- font-weight:650;color:#bcd0ea;cursor:pointer;transition:.18s ease}
-.flag:hover{border-color:var(--stroke-2);background:rgba(120,160,220,.06)}
-.flag input{width:16px;height:16px;margin:0;flex:none}
-.flag .bit{font:750 10px/1 ui-monospace,monospace;color:var(--dim);letter-spacing:.03em;flex:none}
-.flag .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.flag .val{font:650 10px ui-monospace,monospace;color:var(--dim);flex:none}
-.flag:has(input:checked){border-color:rgba(106,167,255,.52);color:#eef5ff;
- background:linear-gradient(135deg,rgba(106,167,255,.15),rgba(167,139,250,.10));
- box-shadow:inset 0 0 0 1px rgba(106,167,255,.12)}
 /* tables */
 .table-wrap{overflow:auto;border:1px solid var(--stroke);border-radius:14px;background:rgba(8,14,25,.42)}
 table{width:100%;border-collapse:collapse;font-size:13.5px}

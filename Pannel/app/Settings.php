@@ -8,7 +8,11 @@ final class Settings {
         return $row;
     }
     public static function update(array $v): void {
-        $features=Validation::featureMask($v,0);
+        $current=self::get();
+        $hasFeatureInput=isset($v['feature_selection']) || isset($v['feature_mask']);
+        $features=$hasFeatureInput
+            ? Validation::featureMask($v,0)
+            : (int)$current['default_features'];
         $notice=mb_substr(trim((string)($v['notice']??'')),0,255);
         $keyCost=self::bounded($v['key_cost']??1,0,100000);
         $signupBonus=self::bounded($v['signup_bonus']??0,0,100000);

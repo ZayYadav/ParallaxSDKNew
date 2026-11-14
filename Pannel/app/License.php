@@ -74,8 +74,12 @@ final class License {
     }
 
     public static function rules(int $id,array $v,int $actorId): void {
-        self::findScoped($id,$actorId);
+        $lic=self::findScoped($id,$actorId);
         $r=Validation::choices($v);
+        if (!isset($v['feature_selection']) && !isset($v['feature_mask'])) {
+            /* Feature UI is gone; keep whatever mask the key already carries. */
+            $r['feature']=(int)($lic['feature_mask']??0);
+        }
         $expiry=trim((string)($v['expires_at']??''));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$expiry))
             throw new Deny('INVALID_EXPIRY',422);
