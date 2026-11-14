@@ -398,23 +398,36 @@ body.auth{display:grid;place-items:center;padding:28px 18px;min-height:100vh}
 .auth-bullets li{display:flex;gap:10px;align-items:center}
 .auth-bullets svg{color:#8db6ff;flex:none}
 .auth-foot{color:var(--dim);font-size:11.5px;text-align:center}
-/* login: plain page, no background media */
-body.login{display:grid;place-items:center;padding:24px;min-height:100vh;
- overflow-x:hidden;background:var(--bg)}
-body.login .shell.auth-wrap{display:block;max-width:360px;width:100%;
- min-height:0;padding:0;margin:0}
+/* login: full-bleed video with the form floating straight over it */
+body.login{display:block;padding:0;min-height:100vh;overflow-x:hidden}
+body.login .bg-video{opacity:1;filter:saturate(1.06) contrast(1.04)}
+body.login .video-veil{background:
+ linear-gradient(180deg,rgba(4,8,15,.28) 0%,rgba(4,8,15,.10) 42%,rgba(4,8,15,.42) 100%),
+ radial-gradient(760px 520px at 50% 52%,rgba(4,8,15,.42),rgba(4,8,15,0) 72%)}
+body.login .shell.auth-wrap{max-width:none;width:100%;min-height:100vh;min-height:100dvh;
+ padding:24px;justify-content:center;align-items:center}
 body.login .auth-card{max-width:360px;width:100%;margin:0;padding:0;
  background:none;border:0;border-radius:0;box-shadow:none;
  backdrop-filter:none;-webkit-backdrop-filter:none}
-body.login .auth-welcome{font-size:32px;line-height:1.1;text-align:center;
- letter-spacing:-.02em;margin:0 0 24px}
-body.login .auth-card label{margin-bottom:14px}
+body.login .auth-welcome{font-size:34px;line-height:1.1;text-align:center;
+ letter-spacing:-.02em;margin:0 0 24px;text-shadow:0 3px 22px rgba(0,0,0,.7)}
+body.login .auth-card label{margin-bottom:14px;color:#eaf2ff;
+ text-shadow:0 1px 12px rgba(0,0,0,.7)}
+body.login .auth-card input{padding:12px 14px;border-radius:12px;
+ background:rgba(4,9,17,.66);border-color:rgba(184,208,255,.44);
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+ box-shadow:0 10px 30px -16px rgba(0,0,0,.8)}
+body.login .auth-card input::placeholder{color:rgba(200,216,240,.65)}
 body.login .auth-submit{width:100%;margin-top:6px;padding:13px;border-radius:12px;
  letter-spacing:.01em;font-weight:800}
 @media(max-width:760px){
- body.login{padding:18px}
+ body.login .shell.auth-wrap{padding:18px 14px max(22px,env(safe-area-inset-bottom,22px))}
+ body.login .video-veil{background:
+   linear-gradient(180deg,rgba(4,8,15,.26) 0%,rgba(4,8,15,.10) 42%,rgba(4,8,15,.52) 100%),
+   radial-gradient(520px 420px at 50% 50%,rgba(4,8,15,.38),rgba(4,8,15,0) 74%)}
  body.login .shell.auth-wrap,
  body.login .auth-card{max-width:420px}
+ body.login .auth-welcome{font-size:32px}
 }
 .foot{max-width:1260px;margin:0 auto;padding:0 20px 34px;color:var(--dim);font-size:11.5px;
  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}

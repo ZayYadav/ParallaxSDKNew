@@ -288,7 +288,7 @@ final class AdminController {
           .View::field('Password','password','','password',
             'required autocomplete="current-password"')
           .'<button type="submit" class="auth-submit">Login</button></form></section>';
-        View::page('Login',$body,false,'','','','auth login');
+        View::page('Login',$body,false,'','','/assets/tdcore.mp4','auth login');
     }
     public static function login(): never {
         Auth::csrfCheck();
