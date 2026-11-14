@@ -420,6 +420,10 @@ body.login .auth-card input{padding:12px 14px;border-radius:12px;
 body.login .auth-card input::placeholder{color:rgba(200,216,240,.65)}
 body.login .auth-submit{width:100%;margin-top:6px;padding:13px;border-radius:12px;
  letter-spacing:.01em;font-weight:800}
+body.login .auth-register{width:100%;margin-top:10px;padding:12px;border-radius:12px;
+ text-decoration:none;font-weight:750;color:#e6f0ff;
+ background:rgba(6,11,20,.62);border-color:rgba(184,208,255,.38);
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 @media(max-width:760px){
  body.login .shell.auth-wrap{padding:18px 14px max(22px,env(safe-area-inset-bottom,22px))}
  body.login .video-veil{background:
@@ -428,6 +432,43 @@ body.login .auth-submit{width:100%;margin-top:6px;padding:13px;border-radius:12p
  body.login .shell.auth-wrap,
  body.login .auth-card{max-width:420px}
  body.login .auth-welcome{font-size:32px}
+}
+/* register: same full-bleed video with the form floating over it */
+body.register{display:block;padding:0;min-height:100vh;overflow-x:hidden}
+body.register .bg-video{opacity:1;filter:saturate(1.06) contrast(1.04)}
+body.register .video-veil{background:
+ linear-gradient(180deg,rgba(4,8,15,.36) 0%,rgba(4,8,15,.16) 40%,rgba(4,8,15,.58) 100%),
+ radial-gradient(900px 640px at 50% 46%,rgba(4,8,15,.52),rgba(4,8,15,0) 76%)}
+body.register .shell.auth-wrap{max-width:none;width:100%;min-height:100vh;min-height:100dvh;
+ padding:30px 18px;justify-content:center;align-items:center}
+body.register .auth-card{max-width:440px;width:100%;margin:0;padding:24px 22px 22px;
+ background:none;border:0;border-radius:0;box-shadow:none;
+ backdrop-filter:none;-webkit-backdrop-filter:none}
+body.register .auth-head{margin-bottom:18px}
+body.register .auth-head .brand{margin-bottom:12px}
+body.register .auth-head h1{font-size:28px;text-shadow:0 3px 22px rgba(0,0,0,.7)}
+body.register .auth-head p{color:#e2ecff;text-shadow:0 1px 12px rgba(0,0,0,.7)}
+body.register .auth-card label,
+body.register .checkline{color:#eaf2ff;text-shadow:0 1px 12px rgba(0,0,0,.7)}
+body.register .auth-card input{padding:11px 13px;border-radius:12px;
+ background:rgba(4,9,17,.66);border-color:rgba(184,208,255,.44);
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+ box-shadow:0 10px 30px -16px rgba(0,0,0,.8)}
+body.register .auth-card input::placeholder{color:rgba(200,216,240,.65)}
+body.register .auth-card input[type=checkbox]{width:16px;height:16px;padding:0;margin:0 8px 0 0;
+ box-shadow:none;accent-color:#6aa7ff}
+body.register .auth-bullets,
+body.register .auth-split{color:#dbe7fa;text-shadow:0 1px 12px rgba(0,0,0,.7)}
+body.register .auth-card .btn.ghost{background:rgba(6,11,20,.62);
+ border-color:rgba(184,208,255,.36);backdrop-filter:blur(10px);
+ -webkit-backdrop-filter:blur(10px)}
+body.register .auth-foot{color:#c6d8f0;text-shadow:0 1px 10px rgba(0,0,0,.7)}
+@media(max-width:760px){
+ body.register .shell.auth-wrap{padding:18px 14px max(22px,env(safe-area-inset-bottom,22px))}
+ body.register .video-veil{background:
+   linear-gradient(180deg,rgba(4,8,15,.34) 0%,rgba(4,8,15,.14) 40%,rgba(4,8,15,.60) 100%),
+   radial-gradient(620px 520px at 50% 48%,rgba(4,8,15,.46),rgba(4,8,15,0) 78%)}
+ body.register .auth-card{max-width:440px;padding:20px 16px 18px}
 }
 .foot{max-width:1260px;margin:0 auto;padding:0 20px 34px;color:var(--dim);font-size:11.5px;
  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}

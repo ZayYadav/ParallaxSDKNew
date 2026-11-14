@@ -287,7 +287,8 @@ final class AdminController {
             'required autofocus autocomplete="username" maxlength="60"')
           .View::field('Password','password','','password',
             'required autocomplete="current-password"')
-          .'<button type="submit" class="auth-submit">Login</button></form></section>';
+          .'<button type="submit" class="auth-submit">Login</button></form>'
+          .'<a class="btn ghost auth-register" href="/register">Register</a></section>';
         View::page('Login',$body,false,'','','/assets/tdcore.mp4','auth login');
     }
     public static function login(): never {
