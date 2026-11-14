@@ -66,6 +66,16 @@
         toggle.hidden = !hasAudioTrack();
     }
 
+    /* Chrome exposes whether audible autoplay is allowed for this site. */
+    function autoplayAllowsSound() {
+        try {
+            if (typeof navigator.getAutoplayPolicy === 'function') {
+                return navigator.getAutoplayPolicy('mediaelement') === 'allowed';
+            }
+        } catch (ignored) {}
+        return false;
+    }
+
     /* A real gesture is the only reliable way to start audible playback. */
     var GESTURES = ['pointerdown', 'touchstart', 'keydown', 'click'];
     var unlock = null;
@@ -126,5 +136,11 @@
 
     label(false);
     showToggle();
-    armAutoUnlock();
+    if (hasAudioTrack() && autoplayAllowsSound()) {
+        /* The site has enough media engagement to autoplay with sound. */
+        stopAutoUnlock();
+        setSound(true);
+    } else {
+        armAutoUnlock();
+    }
 })();
