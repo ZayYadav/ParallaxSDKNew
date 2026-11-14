@@ -2,3 +2,5 @@ node_modules
 .env
 .DS_Store
 *.log
+# Third-party clip used only on the private deployment, never in git.
+assets/tdcore.mp4

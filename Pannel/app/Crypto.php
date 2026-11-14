@@ -24,4 +24,43 @@ final class Crypto {
     public static function ipHash(): string {
         return self::digest((string)($_SERVER['REMOTE_ADDR']??'unknown'));
     }
+    /** Non-secret information about the active P-256 signing key. */
+    public static function signingKeyInfo(): array {
+        try {
+            $path=Config::need('TD_SIGNING_PRIVATE_KEY_FILE');
+            $pem=@file_get_contents($path);
+            $private=$pem!==false?openssl_pkey_get_private($pem):false;
+            if (!$private) throw new \RuntimeException('key unreadable');
+            $d=openssl_pkey_get_details($private);
+            if (!$d) throw new \RuntimeException('key details unavailable');
+            $curve=(string)($d['ec']['curve_name']??'unknown');
+            $der=self::publicKeyDer((string)($d['key']??''));
+            $fp=$der!==''?trim(chunk_split(base64_encode(hash('sha256',$der,true)),4,' ')):'unavailable';
+            $ok=($d['type']??0)===OPENSSL_KEYTYPE_EC && $curve==='prime256v1';
+            return ['ok'=>$ok,
+                'curve'=>$curve==='prime256v1'?'P-256':$curve,'bits'=>(int)($d['bits']??0),
+                'fingerprint'=>$fp,'path'=>$path];
+        } catch (\Throwable $e) {
+            return ['ok'=>false,'curve'=>'unavailable','bits'=>0,'fingerprint'=>'unavailable','path'=>''];
+        }
+    }
+    /** Base64 X.509 DER public key, exactly the value compiled into the SDK. */
+    public static function publicKeyBase64(): string {
+        return base64_encode(self::publicKeyDer(self::publicKeyPem()));
+    }
+    private static function publicKeyPem(): string {
+        $path=Config::need('TD_SIGNING_PRIVATE_KEY_FILE');
+        $pem=@file_get_contents($path);
+        $private=$pem!==false?openssl_pkey_get_private($pem):false;
+        if (!$private) throw new \RuntimeException('Signing key unavailable');
+        $d=openssl_pkey_get_details($private);
+        if (!$d) throw new \RuntimeException('Signing key details unavailable');
+        return (string)($d['key']??'');
+    }
+    private static function publicKeyDer(string $pem): string {
+        if (!preg_match('/-----BEGIN PUBLIC KEY-----(.+?)-----END PUBLIC KEY-----/s',$pem,$m))
+            return '';
+        $der=base64_decode(preg_replace('/\s+/','',$m[1])??'',true);
+        return $der===false?'':$der;
+    }
 }

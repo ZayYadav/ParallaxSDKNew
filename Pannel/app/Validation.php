@@ -48,12 +48,8 @@ final class Validation {
             throw new Deny('INVALID_SIGNER_SHA256',422);
         return $s;
     }
-    public static function choices(array $v): array {
-        $package=self::rule($v['package_rule']??'required');
-        $signer=self::rule($v['signer_rule']??'required');
-        $device=self::deviceRule($v['device_rule']??'bind');
-        $max=self::integer($v['max_devices']??1,1,1000);
-        $perMin=self::integer($v['requests_per_minute']??30,1,600);
+    /** Read either shorthand feature_bits[] checkboxes or a numeric feature_mask. */
+    public static function featureMask(array $v, int $fallback=0): int {
         if (isset($v['feature_selection'])) {
             $feature=0;
             $bits=$v['feature_bits']??[];
@@ -62,9 +58,17 @@ final class Validation {
                 $index=self::integer($bit,0,30);
                 $feature |= (1 << $index);
             }
-        } else {
-            $feature=self::integer($v['feature_mask']??0,0,2147483647);
+            return $feature;
         }
+        return self::integer($v['feature_mask']??$fallback,0,2147483647);
+    }
+    public static function choices(array $v): array {
+        $package=self::rule($v['package_rule']??'required');
+        $signer=self::rule($v['signer_rule']??'required');
+        $device=self::deviceRule($v['device_rule']??'bind');
+        $max=self::integer($v['max_devices']??1,1,1000);
+        $perMin=self::integer($v['requests_per_minute']??30,1,600);
+        $feature=self::featureMask($v);
         $pkg=self::package($v['package_name']??'');
         $cert=self::signer($v['signing_sha256']??'');
         if ($package==='required' && $pkg==='') throw new Deny('PACKAGE_REQUIRED',422);

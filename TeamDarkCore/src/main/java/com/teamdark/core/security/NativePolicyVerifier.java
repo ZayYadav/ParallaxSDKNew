@@ -20,9 +20,28 @@ public final class NativePolicyVerifier {
     @Keep
     private static native int getNativeFeatures(long currentEpochSeconds);
 
+    @Keep
+    private static native boolean nativeGuardHealthy();
+
+    @Keep
+    private static native void nativeGuardWipe();
+
+    /** Native anti-tamper probe. False means the guard is poisoned or absent. */
+    public static boolean guardHealthy() {
+        if (!AVAILABLE) return false;
+        try { return nativeGuardHealthy(); }
+        catch (Throwable ignored) { return false; }
+    }
+
+    /** Permanently poison the native guard and zero the current lease. */
+    public static void guardWipe() {
+        try { nativeGuardWipe(); }
+        catch (Throwable ignored) {}
+    }
+
     /** Signed feature bits expire with the verified server lease. */
     public static int authorizedFeatures() {
-        if (!AVAILABLE) return 0;
+        if (!AVAILABLE || !guardHealthy()) return 0;
         try { return getNativeFeatures(System.currentTimeMillis() / 1000L); }
         catch (Throwable ignored) { return 0; }
     }

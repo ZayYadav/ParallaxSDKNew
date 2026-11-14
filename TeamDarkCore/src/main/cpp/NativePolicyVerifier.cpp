@@ -7,10 +7,17 @@
 #include <string>
 #include <vector>
 
+#include "TDCoreGuard.h"
+
 /*
  * TDCore server-authenticated access policy. Verification happens in native
  * code; Android's vetted java.security Signature provider performs P-256
  * ECDSA operations through JNI. No private signing material is shipped to SDK.
+ *
+ * Every policy operation is gated by the native integrity guard. A debugger,
+ * instrumentation agent or inline hook poisons the process permanently: the
+ * lease and feature bits are zeroed and all later checks fail closed. There is
+ * no offline path that can restore access.
  */
 namespace {
 std::atomic<long long> gLeaseUntil{0};
@@ -120,6 +127,7 @@ Java_com_teamdark_core_security_NativePolicyVerifier_verifySignedPolicy(
     if (!env || now <= 0 || !payloadB64 || !signatureB64 ||
         !publicKeyB64 || !deviceValue || !packageValue ||
         !certificateValue || !nonceValue) return JNI_FALSE;
+    if (!tdcore::guard::selfCheck()) return JNI_FALSE;
 
     jbyteArray bytes = decodeBase64(env, payloadB64);
     jbyteArray sig = decodeBase64(env, signatureB64);
@@ -159,6 +167,28 @@ Java_com_teamdark_core_security_NativePolicyVerifier_verifySignedPolicy(
 extern "C" JNIEXPORT jint JNICALL
 Java_com_teamdark_core_security_NativePolicyVerifier_getNativeFeatures(
     JNIEnv*, jclass, jlong now) {
+    if (!tdcore::guard::selfCheck()) {
+        gLeaseUntil.store(0);
+        gFeatureMask.store(0);
+        return 0;
+    }
     if (now <= 0 || gLeaseUntil.load() <= static_cast<long long>(now)) return 0;
     return static_cast<jint>(gFeatureMask.load());
+}
+
+/* Native integrity probe. False means tampering was detected and the guard is
+ * already poisoned; Java must wipe its local session and deny every feature. */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_teamdark_core_security_NativePolicyVerifier_nativeGuardHealthy(
+    JNIEnv*, jclass) {
+    return tdcore::guard::selfCheck() ? JNI_TRUE : JNI_FALSE;
+}
+
+/* Permanent local wipe used when Java-side checks detect tampering. */
+extern "C" JNIEXPORT void JNICALL
+Java_com_teamdark_core_security_NativePolicyVerifier_nativeGuardWipe(
+    JNIEnv*, jclass) {
+    tdcore::guard::wipe();
+    gLeaseUntil.store(0);
+    gFeatureMask.store(0);
 }

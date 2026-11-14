@@ -7,6 +7,63 @@ restrictions, feature bitmasks, global maintenance, revocation and audit logs.
 The SDK uses a 60-second server-signed P-256 ECDSA lease. No server private
 key is distributed to the SDK.
 
+Panel v3 adds public registration, referral links, an owner/admin/reseller
+hierarchy and a credit ledger, plus a native anti-tamper guard in the SDK.
+
+## Panel v2: username/password + security center
+
+The admin area now signs in with a **username and password** stored in
+`td_admins` (bcrypt via `password_hash`, never plaintext). The first owner is
+seeded from `TD_ADMIN_USERNAME` and `TD_ADMIN_PASSWORD_HASH` by
+`app/Migration.php` on the first request; a marker is written to the private
+folder above the document root so normal requests run no DDL.
+
+New pages: `/admin/security` (password change, admin accounts, login history,
+signing-key health), `/admin/features` (rename the 31 signed feature bits) and
+a rebuilt dashboard, sticky navbar, responsive mobile navigation and audit
+trail. `td_feature_flags`, `td_admins` and `td_login_events` are created
+automatically by the migration and are also present in `schema.sql` for fresh
+installs.
+
+`TD_ADMIN_PASSWORD_HASH` is only used to seed the first account. After that,
+change passwords from **Security center**. Everything is CSS-only: the strict
+CSP keeps `script-src 'none'`.
+
+## Panel v3: registration, referrals, roles and credits
+
+Three roles are enforced server-side:
+
+| Role | Visibility | Can create | Credits |
+| --- | --- | --- | --- |
+| `owner` | Entire network | admins, resellers, links under any staff account | Unlimited, funds all bonuses |
+| `admin` | Self + downline | resellers always; admins only with `can_refer_admins` | Allocates from own balance |
+| `reseller` | Own keys, credits and profile | Nothing; generates keys only | Spends `key_cost` per key |
+
+- Public registration at `/register`, optionally through a role-targeted
+  link (`/register?ref=CODE`). `open_registration` allows link-free signups;
+  a valid referral link still works when open registration is closed.
+  Successful registration signs the new account in immediately.
+- Referral codes are owned by an upline (`td_referral_codes`), capped by
+  `max_uses`, pausable, and every signup is recorded in `td_referrals`.
+  Staff get a personal reseller link; resellers never get link creation.
+- Credits are a ledger, not a mutable counter. `td_credit_ledger` stores the
+  actor, delta, balance after and note for grants, spends and bonuses. A key
+  issue costs `key_cost` on every non-owner account; `signup_bonus` and
+  `referral_bonus` are owner-funded and never reduce the owner balance.
+- New pages: `/admin/accounts` (role-aware account management),
+  `/admin/credits` (transfer, owner unlimited toggle, ledger),
+  `/admin/referrals` (links, signups, personal link) and `/admin/account`
+  (profile, balance, personal link, password). Navigation and dashboards adapt
+  to the signed-in role; staff-only screens redirect resellers to `/admin`.
+- Login, registration and `GET /connect` share a full-screen looping
+  background video (`assets/tdcore-brand.mp4`, poster
+  `assets/tdcore-poster.jpg`) with a CSS animated-gradient fallback. The video
+  is decorative only: it is muted, autoplay, and ignored when the browser
+  blocks playback. `POST /connect` remains the JSON SDK endpoint.
+
+Existing installations upgrade through the idempotent v3 migration in
+`app/Migration.php`; `schema.sql` contains the same tables for fresh installs.
+
 ## Requirements
 
 PHP 8.2+ with PDO MySQL, OpenSSL, mbstring; MySQL 8+ or MariaDB 10.6+;
@@ -92,6 +149,21 @@ signature, both verified inside `NativePolicyVerifier.cpp`. The API has
 library, invalid signature, bad cert/device/nonce, expired lease, revoked
 key or server downtime always deny authorization.
 
+### Native integrity guard
+
+`TDCoreGuard.cpp` runs before every signed-policy verification and every
+feature read. It checks `TracerPid` for an attached debugger, scans
+`/proc/self/maps` for Frida, Xposed/LSPosed, substrate and injector agents,
+verifies an in-memory canary and compares the first bytes of critical libc
+entries with a first-use snapshot to catch inline hooks. Paths and agent names
+are XOR-encrypted at compile time and never appear as plaintext literals.
+
+Any positive result poisons the process permanently: the current lease and
+feature mask are zeroed, `SdkLicenseGuard` clears its stored key and session
+preferences, and every later authorization returns false. There is no
+diagnostic bypass, no offline repair path and no destructive action against
+the user's device.
+
 ## Threat model and limitations
 
 - ECDSA signature verification provides response integrity/authenticity;
@@ -104,6 +176,14 @@ key or server downtime always deny authorization.
 - A modified Android app can patch its own code. **No purely client-side
   protection is uncrackable**. Put sensitive operations/data behind
   server authorization; do not depend solely on local Java or C++ checks.
+- The native integrity guard is defense in depth, not a warranty. Custom
+  kernels, repackaged native libraries or runtime memory patches can still
+  defeat local checks. Short leases, server-side denial and revocation remain
+  the primary control.
+- The repository ships only the original abstract brand loop
+  (`assets/tdcore-brand.mp4`). Any separate footage used on a private
+  deployment is not committed to this repository; confirm rights before
+  publishing third-party media.
 - The old Node/Neon panel's client portal, crash telemetry, plugin-hosting
   options and 46 legacy REST endpoints have not been migrated to this
   version. Existing Neon data also requires a separately tested export/import
@@ -112,7 +192,7 @@ key or server downtime always deny authorization.
 - Signing-key rotation requires a client build with the new public key.
   Protect the original private key and perform backups/controlled rotations.
 
-## Modular architecture (23 PHP files, including front controller and CI router)
+## Modular architecture (36 PHP files, including front controller and CI router)
 
 All public URLs are extensionless and handled through the `index.php` front
 controller; PHP classes in `Pannel/app/` are not directly web-accessible.
@@ -124,11 +204,22 @@ Do not deploy `LegacyNodePanel/` into the PHP document root.
 `POST /admin/licenses/{id}/status`,
 `POST /admin/licenses/{id}/policy`,
 `POST /admin/licenses/{id}/reset-devices`,
+`GET /admin/accounts`, `POST /admin/accounts`,
+`POST /admin/accounts/{id}/toggle`,
+`POST /admin/accounts/{id}/password`,
+`POST /admin/accounts/{id}/delete`,
+`GET /admin/credits`, `POST /admin/credits/grant`,
+`POST /admin/credits/unlimited`,
+`GET /admin/referrals`, `POST /admin/referrals/create`,
+`POST /admin/referrals/{id}/toggle`,
+`GET /admin/account`, `POST /admin/account/password`,
 `GET|POST /admin/settings`, `GET /admin/devices`,
 `POST /admin/devices/block`, `POST /admin/devices/unblock`,
-`GET /admin/audit`, `POST /connect` and
-`POST /api/v1/license/check`, plus `GET /health`.
-`/connect` is retained for the existing Android SDK URL.
+`GET /admin/audit`, `GET|POST /register`, `GET /connect`,
+`POST /connect` and `POST /api/v1/license/check`, plus `GET /health`.
+`POST /connect` is retained for the existing Android SDK URL; `GET /connect`
+is the browser landing page. Registration closes automatically when
+`open_registration` is off and no valid referral link is supplied.
 
 **Per-key enforcement selection** (the administrator chooses explicit modes):
 - Package rule: `required` (strict exact match), `if_present` (optional
@@ -151,7 +242,10 @@ only when the corresponding SDK entry point explicitly checks that bit.
 Do not treat enabling a checkbox as magic control of every Android method.
 New strict-mode keys require explicit Android package and certificate SHA-256.
 
-On upgrade, re-import `schema.sql` to create the three new tables.
+On upgrade, re-import `schema.sql` to create the new tables, or let the
+idempotent migration add the v3 columns (`td_admins.role/parent_id/credits`,
+`td_licenses.owner_account_id`, `td_settings.key_cost`) and the
+`td_referral_codes`, `td_referrals` and `td_credit_ledger` tables.
 Existing license records without `td_license_rules` retain compatibility:
 their configured package and signer are enforced if present, and device binding
 remains enabled. Newly issued keys use the administrator-selected rules.

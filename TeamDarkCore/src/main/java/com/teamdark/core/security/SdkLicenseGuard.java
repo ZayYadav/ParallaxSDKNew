@@ -99,9 +99,29 @@ public final class SdkLicenseGuard {
 
     /** No offline fallback: panel approval is required on every authorization. */
     public static boolean isLicensed(final Context context) {
+        if (!NativePolicyVerifier.guardHealthy()) {
+            failClosed(context);
+            return false;
+        }
         final String key = getSdkKey(context);
         if (context == null || key.isEmpty()) return false;
         return verifySync(context, key);
+    }
+
+    /**
+     * Tamper response: poison the native guard, forget the stored key and mark
+     * the session dead. Deliberately permanent for this process, with no
+     * offline or cached fallback.
+     */
+    private static void failClosed(Context context) {
+        NativePolicyVerifier.guardWipe();
+        sCachedValid = false;
+        sSdkKey = null;
+        if (context == null) return;
+        try {
+            context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                .edit().clear().apply();
+        } catch (Throwable ignored) {}
     }
 
 
@@ -165,6 +185,10 @@ public final class SdkLicenseGuard {
 
     private static boolean performOnlineCheck(Context context, String key) {
         sCachedValid = false;
+        if (!NativePolicyVerifier.guardHealthy()) {
+            failClosed(context);
+            return false;
+        }
         if (!PANEL_URL.startsWith("https://") ||
             com.teamdark.core.BuildConfig.TD_LICENSE_PUBLIC_KEY.isEmpty()) return false;
         HttpsURLConnection conn = null;

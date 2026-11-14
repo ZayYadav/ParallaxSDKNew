@@ -1,4 +1,6 @@
 Options -Indexes -MultiViews
+AddType video/mp4 .mp4
+AddType image/jpeg .jpg
 DirectoryIndex index.php
 <IfModule mod_rewrite.c>
  RewriteEngine On
