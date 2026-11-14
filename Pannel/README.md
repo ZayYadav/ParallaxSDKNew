@@ -63,6 +63,8 @@ Three roles are enforced server-side:
   autoplay policy forces the clip to start muted; the sound pill or the first
   tap/key press enables audio, and the choice is kept for the session with
   `sessionStorage`. Playback is ignored when the browser blocks video entirely.
+  The login page shows the clip full-bleed with a translucent sign-in panel
+  floating over it; register and `/connect` keep the centred card layout.
   `POST /connect` remains the JSON SDK endpoint.
 
 Existing installations upgrade through the idempotent v3 migration in

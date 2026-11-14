@@ -401,6 +401,32 @@ body.auth{display:grid;place-items:center;padding:28px 18px;min-height:100vh}
 .auth-bullets li{display:flex;gap:10px;align-items:center}
 .auth-bullets svg{color:#8db6ff;flex:none}
 .auth-foot{color:var(--dim);font-size:11.5px;text-align:center}
+/* login: full-bleed background video with the sign-in panel floating over it */
+body.login{display:block;padding:0;min-height:100vh;overflow-x:hidden}
+body.login .bg-video{opacity:1;filter:saturate(1.06) contrast(1.04)}
+body.login .video-veil{background:
+ linear-gradient(90deg,rgba(4,8,15,.66) 0%,rgba(4,8,15,.34) 34%,
+   rgba(4,8,15,.08) 58%,rgba(4,8,15,.30) 100%),
+ linear-gradient(180deg,rgba(4,8,15,.22),rgba(4,8,15,.48))}
+body.login .shell.auth-wrap{max-width:none;width:100%;min-height:100vh;
+ padding:26px clamp(18px,5vw,84px);justify-content:center;align-items:flex-end}
+body.login .auth-card{max-width:400px;width:100%;margin:0;
+ background:linear-gradient(160deg,rgba(16,25,42,.62),rgba(7,12,22,.74));
+ border:1px solid rgba(154,190,255,.34);
+ backdrop-filter:blur(24px) saturate(1.25);
+ -webkit-backdrop-filter:blur(24px) saturate(1.25);
+ box-shadow:0 44px 90px -40px #000,0 0 90px -50px rgba(106,167,255,.6)}
+body.login .auth-card input,
+body.login .auth-card select{background:rgba(5,10,19,.72)}
+body.login .auth-foot{color:#a9bdd6}
+@media(max-width:760px){
+ body.login .shell.auth-wrap{align-items:center;justify-content:flex-end;
+   padding:16px 14px max(28px,env(safe-area-inset-bottom,28px))}
+ body.login .video-veil{background:
+   linear-gradient(180deg,rgba(4,8,15,.30) 0%,rgba(4,8,15,.24) 42%,rgba(4,8,15,.86) 100%)}
+ body.login .auth-card{max-width:480px;
+   background:linear-gradient(165deg,rgba(14,22,38,.74),rgba(7,12,22,.86))}
+}
 .foot{max-width:1260px;margin:0 auto;padding:0 20px 34px;color:var(--dim);font-size:11.5px;
  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 /* auth video stage */
