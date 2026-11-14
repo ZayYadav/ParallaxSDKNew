@@ -31,6 +31,7 @@ final class View {
         'coin'=>'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.8 9.6c-.6-.8-1.6-1.1-2.8-1.1-1.7 0-2.8.8-2.8 2s1 1.7 2.8 2 2.8.9 2.8 2-1.2 2-2.8 2c-1.3 0-2.4-.4-3-1.3"/>',
         'link'=>'<path d="M9.5 14.5 14.5 9.5"/><path d="M11 7.5 12.6 6a3.8 3.8 0 0 1 5.4 5.4L16.5 13"/><path d="M13 16.5 11.4 18a3.8 3.8 0 0 1-5.4-5.4L7.5 11"/>',
         'user'=>'<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+        'volume'=>'<path d="M4.5 10v4h3l4 3.4V6.6L7.5 10h-3Z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/>',
         'copy'=>'<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 9V6.5A2.5 2.5 0 0 0 12.5 4H6.5A2.5 2.5 0 0 0 4 6.5v6A2.5 2.5 0 0 0 6.5 15H9"/>',
         ];
         $body=$paths[$name]??'';
@@ -118,12 +119,17 @@ final class View {
 
     /** Full-screen looping video with an animated gradient fallback. */
     private static function videoStage(string $src): string {
+        $audio=$src!=='/assets/tdcore-brand.mp4'?'1':'0';
         return '<div class="video-bg" aria-hidden="true"><div class="aurora"></div>'
             .'<video class="bg-video" autoplay muted loop playsinline preload="metadata"'
-            .' poster="/assets/tdcore-poster.jpg">'
+            .' data-audio="'.$audio.'" poster="/assets/tdcore-poster.jpg">'
             .'<source src="'.self::e($src).'" type="video/mp4">'
             .'<source src="/assets/tdcore-brand.mp4" type="video/mp4">'
-            .'</video><div class="video-veil"></div></div>';
+            .'</video><div class="video-veil"></div></div>'
+            .'<button type="button" class="sound-toggle" data-sound-toggle hidden'
+            .' aria-pressed="false" aria-label="Toggle background video sound">'
+            .self::icon('volume',15).'<span>Sound on</span></button>'
+            .'<script src="/assets/tdcore-video.js" defer></script>';
     }
     private static function topbar(): string {
         $path=(string)(parse_url((string)($_SERVER['REQUEST_URI']??'/admin'),PHP_URL_PATH)?:'/admin');
@@ -404,6 +410,17 @@ body.auth{display:grid;place-items:center;padding:28px 18px;min-height:100vh}
 .video-veil{position:absolute;inset:0;
  background:radial-gradient(900px 620px at 50% 0%,rgba(6,10,18,.15),rgba(6,10,18,.82) 70%),
  linear-gradient(180deg,rgba(6,10,18,.55),rgba(5,8,15,.94))}
+.sound-toggle{position:fixed;right:18px;bottom:max(18px,env(safe-area-inset-bottom,18px));
+ z-index:9;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;
+ font:inherit;font-size:12px;font-weight:700;letter-spacing:.01em;color:#e2eeff;
+ background:rgba(8,14,25,.78);border:1px solid rgba(140,180,255,.45);cursor:pointer;
+ backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ box-shadow:0 12px 32px rgba(0,0,0,.4);transition:.18s ease}
+.sound-toggle[hidden]{display:none}
+.sound-toggle:hover{border-color:rgba(170,205,255,.8);transform:translateY(-1px)}
+.sound-toggle.is-on{color:#0a1220;background:linear-gradient(135deg,#9dc4ff,#c9b8ff);
+ border-color:transparent}
+.sound-toggle svg{flex:none}
 .aurora{position:absolute;inset:-20%;
  background:
  radial-gradient(46% 38% at 20% 24%,rgba(86,128,255,.5),transparent 62%),

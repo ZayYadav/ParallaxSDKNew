@@ -26,8 +26,10 @@ automatically by the migration and are also present in `schema.sql` for fresh
 installs.
 
 `TD_ADMIN_PASSWORD_HASH` is only used to seed the first account. After that,
-change passwords from **Security center**. Everything is CSS-only: the strict
-CSP keeps `script-src 'none'`.
+change passwords from **Security center**. The UI stays CSS-only apart from one
+small self-hosted helper, `/assets/tdcore-video.js`, which controls background
+video sound. The strict CSP allows `script-src 'self'` and still forbids inline
+scripts.
 
 ## Panel v3: registration, referrals, roles and credits
 
@@ -57,9 +59,11 @@ Three roles are enforced server-side:
   to the signed-in role; staff-only screens redirect resellers to `/admin`.
 - Login, registration and `GET /connect` share a full-screen looping
   background video (`assets/tdcore-brand.mp4`, poster
-  `assets/tdcore-poster.jpg`) with a CSS animated-gradient fallback. The video
-  is decorative only: it is muted, autoplay, and ignored when the browser
-  blocks playback. `POST /connect` remains the JSON SDK endpoint.
+  `assets/tdcore-poster.jpg`) with a CSS animated-gradient fallback. Browser
+  autoplay policy forces the clip to start muted; the sound pill or the first
+  tap/key press enables audio, and the choice is kept for the session with
+  `sessionStorage`. Playback is ignored when the browser blocks video entirely.
+  `POST /connect` remains the JSON SDK endpoint.
 
 Existing installations upgrade through the idempotent v3 migration in
 `app/Migration.php`; `schema.sql` contains the same tables for fresh installs.

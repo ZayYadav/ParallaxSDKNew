@@ -13,7 +13,7 @@ if (preg_match('#^/assets/([A-Za-z0-9][A-Za-z0-9._-]*)$#', $path, $m)) {
     if ($file !== false && $base !== false
         && str_starts_with($file, $base . DIRECTORY_SEPARATOR)
         && is_file($file)
-        && preg_match('/\.(?:mp4|webm|jpg|jpeg|png|webp|svg|css|ico)$/i', $file)) {
+        && preg_match('/\.(?:mp4|webm|jpg|jpeg|png|webp|svg|css|js|ico)$/i', $file)) {
         return false; // let the built-in server stream it with its own MIME map
     }
     http_response_code(404);
