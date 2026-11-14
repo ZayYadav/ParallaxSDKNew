@@ -57,16 +57,14 @@ Three roles are enforced server-side:
   `/admin/referrals` (links, signups, personal link) and `/admin/account`
   (profile, balance, personal link, password). Navigation and dashboards adapt
   to the signed-in role; staff-only screens redirect resellers to `/admin`.
-- Login, registration and `GET /connect` share a full-screen looping
-  background video (`assets/tdcore-brand.mp4`, poster
-  `assets/tdcore-poster.jpg`) with a CSS animated-gradient fallback. Browser
-  autoplay policy forces the clip to start muted; the first tap, key press or
-  click turns the sound on and it stays on, with no mute control to manage.
-  Playback is ignored when the browser blocks video entirely.
-  The login page is intentionally reduced to `Welcome`, the username and
-  password fields and the `Login` button, with the clip full-bleed behind a
-  compact glass panel; register and `/connect` keep the centred card layout.
-  `POST /connect` remains the JSON SDK endpoint.
+- Registration and `GET /connect` share a full-screen looping background video
+  (`assets/tdcore-brand.mp4`, poster `assets/tdcore-poster.jpg`) with a CSS
+  animated-gradient fallback. Browser autoplay policy forces the clip to start
+  muted; the first tap, key press or click turns the sound on and it stays on,
+  with no mute control to manage. Playback is ignored when the browser blocks
+  video entirely. The login page has no background media at all: it shows only
+  `Welcome`, the username and password fields and the `Login` button, centred on
+  the plain panel background. `POST /connect` remains the JSON SDK endpoint.
 
 Existing installations upgrade through the idempotent v3 migration in
 `app/Migration.php`; `schema.sql` contains the same tables for fresh installs.
